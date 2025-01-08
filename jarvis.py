@@ -1,3 +1,5 @@
+#currently working verison. Needs improvement in future
+
 import pygame
 import math
 import random
@@ -136,15 +138,21 @@ def record_text():
                 # Recognize speech using Google API
                 MyText = r.recognize_google(audio2, language="en-US")  # Change language if needed
                 print(f"You said: {MyText}")
-                return MyText
+
+                # Check for "Jarvis" keyword
+                if "jarvis" in MyText.lower():
+                    print("Jarvis detected!")
+                    audio = client.generate(text="Yes sir", voice="Brian")  # Respond with "Yes sir"
+                    play(audio)
+                    continue
+                else:
+                    return MyText
 
         except sr.RequestError as e:
             print(f"API Request Error: {e}")
             return "Error: API unavailable"
         except sr.UnknownValueError:
             print("Sorry, I didn't catch that. Please try again.")
-            engine.say("Sorry, I didn't catch that. Please try again.")
-            engine.runAndWait()
 
 def chatbot():
     global model_answering
@@ -163,10 +171,9 @@ def chatbot():
         result = model.invoke(input=user_input)
 
         print(f"Llama 3: {result}")
-        audio = client.generate(text=result, voice="Brian")
-        play(audio)
+        #audio = client.generate(text=result, voice="Brian")
+        #play(audio)
         model_answering = False
-
 
 # Main Loop
 running = True
