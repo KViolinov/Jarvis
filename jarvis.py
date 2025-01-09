@@ -1,16 +1,42 @@
-import pygame
+#working program that uses local model on pc
+
+import os
 import math
+import pygame
 import random
 import speech_recognition as sr
+import google.generativeai as genai
 from langchain_ollama import OllamaLLM
 from elevenlabs.client import ElevenLabs
 from elevenlabs import play
 
 # Initialize Pygame
 pygame.init()
-model = OllamaLLM(model="llama3")
-client = ElevenLabs(api_key="sk_2baa3247d3920a331b6841bcb9412194e5757366c71a0b36")
+#model = OllamaLLM(model="llama3")
+client = ElevenLabs(api_key="sk_c7e032d023ae8f49a951b220f39cfdc30887b09f930d2f2a")
 r = sr.Recognizer()
+
+#Setting up Gemini
+os.environ["GEMINI_API_KEY"] = "AIzaSyBzMQutGJnduWwKcTrmvAvP_QiTj8zaJ3I"
+
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
+
+model = genai.GenerativeModel(model_name="gemini-1.5-flash")
+
+system_instruction = (
+    "You are Jarvis, a helpful and informative AI assistant. "
+    "Always respond in a professional and concise manner."
+)
+
+chat = model.start_chat(
+    history=[
+        {
+            "role": "user",
+            "parts": [system_instruction],
+        }
+    ]
+)
+
 
 # Screen Dimensions
 info = pygame.display.Info()
@@ -68,6 +94,8 @@ jarvis_responses = [
     "Listening, how can I assist you?"
 ]
 
+jarvis_voice = "Brian" #deffault voice
+
 # Ball initial random positions
 random_particles = [{"x": random.randint(0, WIDTH), "y": random.randint(0, HEIGHT), "dx": random.uniform(-2, 2), "dy": random.uniform(-2, 2)} for _ in range(num_particles)]
 
@@ -75,7 +103,7 @@ random_particles = [{"x": random.randint(0, WIDTH), "y": random.randint(0, HEIGH
 model_answering = False
 is_collided = False
 is_generating = False
-
+wake_word_detected = False
 
 def blend_color(current, target, speed):
     """Gradually transitions the current color toward the target color."""
@@ -128,7 +156,7 @@ def draw_thinking():
     global target_color_1, target_color_2, is_collided, angle, speed
     target_color_1 = list(ORANGE1)
     target_color_2 = list(ORANGE2)
-    speed = 1
+    speed = 1.5
     is_collided = True
     angle += speed
 
@@ -146,63 +174,80 @@ def draw_text(surface, text, position, font, color):
     surface.blit(text_surface, position)
 
 def record_text():
-    while True:
-        try:
-            with sr.Microphone() as source2:
-                print("Listening...")
-                r.adjust_for_ambient_noise(source2, duration=0.2)
-                audio2 = r.listen(source2)
+    """Listen for speech and return the recognized text."""
+    try:
+        with sr.Microphone() as source:
+            print("Listening...")
+            r.adjust_for_ambient_noise(source, duration=0.2)
+            audio = r.listen(source)
 
-                # Recognize speech using Google API
-                MyText = r.recognize_google(audio2, language="en-US")  # Change language if needed
-                print(f"You said: {MyText}")
+            # Recognize speech using Google API
+            MyText = r.recognize_google(audio, language="en-US")
+            print(f"You said: {MyText}")
+            return MyText.lower()
 
-                # Check for "Jarvis" keyword
-                if "jarvis" in MyText.lower():
-                    model_answering = True
-                    print("Jarvis detected!")
-
-                    random_response = random.choice(jarvis_responses)
-                    audio = client.generate(text=random_response, voice="Brian")  # Respond with "Yes sir"
-                    play(audio)
-
-                    model_answering = False
-                    continue
-                else:
-                    return MyText
-
-        except sr.RequestError as e:
-            print(f"API Request Error: {e}")
-            return "Error: API unavailable"
-        except sr.UnknownValueError:
-            print("Sorry, I didn't catch that. Please try again.")
+    except sr.RequestError as e:
+        print(f"API Request Error: {e}")
+        return None
+    except sr.UnknownValueError:
+        print("Sorry, I didn't catch that. Please try again.")
+        return None
 
 def chatbot():
-    global model_answering, is_generating
-    print("Welcome to Jarvis! Say 'exit' to end the conversation.")
+    """Main chatbot loop."""
+    global wake_word_detected, model_answering, is_generating
+
+    print("Welcome to Jarvis! Say 'Jarvis' to activate. Say 'exit' to quit.")
 
     while True:
-        #user_input = record_text()
-        user_input = input()
-        if user_input.lower() == "exit":
-            print("Goodbye!")
-            audio = client.generate(text="Goodbye!", voice="Brian")
-            play(audio)
-            break
+        if not wake_word_detected:
+            # Listen for the wake word
+            print("Waiting for wake word...")
+            user_input = record_text()
 
-        # Start thinking state
-        is_generating = True
-        model_answering = False  # Set to False initially to prevent immediate answering
+            if user_input and "jarvis" in user_input:
+                wake_word_detected = True
+                print("Wake word detected!")
+                model_answering = True
+                is_generating = False
 
-        result = model.invoke(input=user_input)  # Get the model's answer
+                jarvis_voice = "Brian"
+                response = random.choice(jarvis_responses)
+                audio = client.generate(text=response, voice=jarvis_voice)
+                play(audio)
+                model_answering = False
 
-        is_generating = False  # Done generating the answer
-        model_answering = True  # Now the model is answering
+            elif user_input == "exit":
+                print("Goodbye!")
+                jarvis_voice = "Brian"
+                audio = client.generate(text="Goodbye!", voice=jarvis_voice)
+                play(audio)
+                break
 
-        print(f"Jarvis: {result}")
-        audio = client.generate(text=result, voice="Brian")
-        play(audio)
-        model_answering = False
+        else:
+            # Actively listen for commands
+            print("Listening for commands...")
+            user_input = record_text()
+
+            if user_input:
+                # Start thinking state
+                is_generating = True
+
+                # Send input to the model
+                result = chat.send_message({"parts": [user_input]})
+
+                # Done generating the answer
+                is_generating = False
+                model_answering = True
+
+                print(f"Jarvis: {result.text}")
+                audio = client.generate(text=result.text, voice=jarvis_voice)
+                play(audio)
+                model_answering = False
+
+            # Reset wake word detection after command
+            wake_word_detected = False
+
 
 # Main Loop
 running = True
