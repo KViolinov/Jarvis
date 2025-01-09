@@ -6,18 +6,18 @@ import pygame
 import random
 import speech_recognition as sr
 import google.generativeai as genai
-from langchain_ollama import OllamaLLM
 from elevenlabs.client import ElevenLabs
 from elevenlabs import play
+import webbrowser
 
 # Initialize Pygame
 pygame.init()
-#model = OllamaLLM(model="llama3")
-client = ElevenLabs(api_key="****")
+pygame.mixer.init()
+client = ElevenLabs(api_key="******")
 r = sr.Recognizer()
 
 #Setting up Gemini
-os.environ["GEMINI_API_KEY"] = "****"
+os.environ["GEMINI_API_KEY"] = "***********"
 
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
@@ -36,7 +36,6 @@ chat = model.start_chat(
         }
     ]
 )
-
 
 # Screen Dimensions
 info = pygame.display.Info()
@@ -91,7 +90,12 @@ jarvis_responses = [
     "I'm here, how can I help?",
     "At your service, sir.",
     "What do you need, sir?",
-    "Listening, how can I assist you?"
+    "Listening, how can I assist you?",
+    "How may I be of help today?",
+    "I'm ready, what's your command?",
+    "What can I do for you, sir?",
+    "Always ready to help, sir.",
+    "How can I assist you?"
 ]
 
 jarvis_voice = "Brian" #deffault voice
@@ -207,11 +211,29 @@ def chatbot():
 
             if user_input and "jarvis" in user_input:
                 wake_word_detected = True
+                pygame.mixer.music.load("beep.flac")
+                pygame.mixer.music.play()
+
                 print("Wake word detected!")
                 model_answering = True
                 is_generating = False
 
                 jarvis_voice = "Brian"
+                response = random.choice(jarvis_responses)
+                audio = client.generate(text=response, voice=jarvis_voice)
+                play(audio)
+                model_answering = False
+
+            elif user_input and "friday" in user_input:
+                wake_word_detected = True
+                pygame.mixer.music.load("beep.flac")
+                pygame.mixer.music.play()
+                
+                print("Wake word detected!")
+                model_answering = True
+                is_generating = False
+
+                jarvis_voice = "Matilda"
                 response = random.choice(jarvis_responses)
                 audio = client.generate(text=response, voice=jarvis_voice)
                 play(audio)
@@ -228,6 +250,12 @@ def chatbot():
             # Actively listen for commands
             print("Listening for commands...")
             user_input = record_text()
+
+            # if user_input and "open" in user_input and "spotify" in user_input:
+            #     print("Command recognized: Open Spotify!")
+            #     webbrowser.open("spotify:track:2qBmtZnPSQouvADmqaHKxk")
+            #     # Skip further processing of this input
+            #     continue
 
             if user_input:
                 # Start thinking state
@@ -247,7 +275,6 @@ def chatbot():
 
             # Reset wake word detection after command
             wake_word_detected = False
-
 
 # Main Loop
 running = True
