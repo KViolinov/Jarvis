@@ -5,7 +5,6 @@ import speech_recognition as sr
 from langchain_ollama import OllamaLLM
 from elevenlabs.client import ElevenLabs
 from elevenlabs import play
-import time
 
 # Initialize Pygame
 pygame.init()
@@ -14,11 +13,11 @@ client = ElevenLabs(api_key="sk_2baa3247d3920a331b6841bcb9412194e5757366c71a0b36
 r = sr.Recognizer()
 
 # Screen Dimensions
-# info = pygame.display.Info()
-# WIDTH, HEIGHT = info.current_w, info.current_h
-# screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
-WIDTH, HEIGHT = 1920, 1080
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+info = pygame.display.Info()
+WIDTH, HEIGHT = info.current_w, info.current_h
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+# WIDTH, HEIGHT = 1920, 1080
+# screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Jarvis Interface")
 
 # Colors
@@ -183,6 +182,7 @@ def chatbot():
     print("Welcome to Jarvis! Say 'exit' to end the conversation.")
 
     while True:
+        #user_input = record_text()
         user_input = input()
         if user_input.lower() == "exit":
             print("Goodbye!")
@@ -200,10 +200,9 @@ def chatbot():
         model_answering = True  # Now the model is answering
 
         print(f"Jarvis: {result}")
-        # audio = client.generate(text=result, voice="Brian")
-        # play(audio)
+        audio = client.generate(text=result, voice="Brian")
+        play(audio)
         model_answering = False
-
 
 # Main Loop
 running = True
