@@ -13,11 +13,11 @@ from elevenlabs import play
 # Initialize Pygame
 pygame.init()
 #model = OllamaLLM(model="llama3")
-client = ElevenLabs(api_key="sk_c7e032d023ae8f49a951b220f39cfdc30887b09f930d2f2a")
+client = ElevenLabs(api_key="****")
 r = sr.Recognizer()
 
 #Setting up Gemini
-os.environ["GEMINI_API_KEY"] = "AIzaSyBzMQutGJnduWwKcTrmvAvP_QiTj8zaJ3I"
+os.environ["GEMINI_API_KEY"] = "****"
 
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
