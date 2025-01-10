@@ -1,23 +1,31 @@
-#working program that uses local model on pc
+# #working program that uses local model on pc
 
 import os
 import math
 import pygame
 import random
+import spotipy
+import webbrowser
 import speech_recognition as sr
 import google.generativeai as genai
-from elevenlabs.client import ElevenLabs
+from langchain_ollama import OllamaLLM
 from elevenlabs import play
-import webbrowser
+from elevenlabs.client import ElevenLabs
+from spotipy.oauth2 import SpotifyClientCredentials
 
 # Initialize Pygame
 pygame.init()
 pygame.mixer.init()
-client = ElevenLabs(api_key="******")
+client = ElevenLabs(api_key="sk_4895d5832580be20287fa0914ec3a9a7da4756056d21b418")
 r = sr.Recognizer()
 
-#Setting up Gemini
-os.environ["GEMINI_API_KEY"] = "***********"
+# Seting up spotify
+client_id = 'dacc19ea9cc44decbdcb2959cd6eb74a'
+client_secret = '11e970f059dc4265a8fe64aaa80a82bf'
+sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=client_id, client_secret=client_secret))
+
+# Setting up Gemini
+os.environ["GEMINI_API_KEY"] = "AIzaSyBzMQutGJnduWwKcTrmvAvP_QiTj8zaJ3I"
 
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
@@ -26,6 +34,8 @@ model = genai.GenerativeModel(model_name="gemini-1.5-flash")
 system_instruction = (
     "You are Jarvis, a helpful and informative AI assistant. "
     "Always respond in a professional and concise manner."
+    "Keep answers short but informative"
+    "Ensure all responses are factually accurate and easy to understand."
 )
 
 chat = model.start_chat(
@@ -54,6 +64,8 @@ ORANGE1 = (255, 165, 0)
 ORANGE2 = (255, 115, 0)
 GREEN1 = (0, 219, 0)
 GREEN2 = (4, 201, 4)
+PINK1 = (255, 182, 193)  # Light Pink
+PINK2 = (255, 105, 180)  # Hot Pink
 
 # Fonts
 font_large = pygame.font.Font(pygame.font.get_default_font(), 36)
@@ -95,10 +107,12 @@ jarvis_responses = [
     "I'm ready, what's your command?",
     "What can I do for you, sir?",
     "Always ready to help, sir.",
-    "How can I assist you?"
+    "How can I assist you?",
+    "Mhm"
 ]
 
 jarvis_voice = "Brian" #deffault voice
+#current_model = "Jarvis"
 
 # Ball initial random positions
 random_particles = [{"x": random.randint(0, WIDTH), "y": random.randint(0, HEIGHT), "dx": random.uniform(-2, 2), "dy": random.uniform(-2, 2)} for _ in range(num_particles)]
@@ -112,10 +126,12 @@ wake_word_detected = False
 def blend_color(current, target, speed):
     """Gradually transitions the current color toward the target color."""
     for i in range(3):
-        if current[i] < target[i]:
-            current[i] = min(current[i] + speed, target[i])
-        elif current[i] > target[i]:
-            current[i] = max(current[i] - speed, target[i])
+        diff = target[i] - current[i]
+        if abs(diff) > speed:
+            current[i] += speed if diff > 0 else -speed
+        else:
+            current[i] = target[i]
+
 
 def draw_particles(surface, particles, target_mode=False):
     """Draws particles on the surface. If target_mode is True, arrange them in a circle and pulse."""
@@ -146,11 +162,17 @@ def draw_particles(surface, particles, target_mode=False):
         # Draw the particle
         pygame.draw.circle(surface, tuple(current_color_2), (int(particle["x"]), int(particle["y"])), int(pulse_factor))
 
-def draw_response():
+def draw_response(model):
     """Update settings when the model is answering."""
     global target_color_1, target_color_2, is_collided, angle, speed
-    target_color_1 = list(GREEN1)
-    target_color_2 = list(GREEN2)
+
+    if model == "Jarvis":
+        target_color_1 = list(GREEN1)
+        target_color_2 = list(GREEN2)
+    elif model == "Friday":
+        target_color_1 = list(PINK1)
+        target_color_2 = list(PINK2)
+
     speed = 1
     is_collided = True
     angle += speed
@@ -199,7 +221,9 @@ def record_text():
 
 def chatbot():
     """Main chatbot loop."""
-    global wake_word_detected, model_answering, is_generating
+    global wake_word_detected, model_answering, is_generating, current_model
+
+    current_model= "Jarvis"
 
     print("Welcome to Jarvis! Say 'Jarvis' to activate. Say 'exit' to quit.")
 
@@ -211,6 +235,7 @@ def chatbot():
 
             if user_input and "jarvis" in user_input:
                 wake_word_detected = True
+                current_model = "Jarvis"
                 pygame.mixer.music.load("beep.flac")
                 pygame.mixer.music.play()
 
@@ -222,13 +247,16 @@ def chatbot():
                 response = random.choice(jarvis_responses)
                 audio = client.generate(text=response, voice=jarvis_voice)
                 play(audio)
+
                 model_answering = False
+                is_generating = True
 
             elif user_input and "friday" in user_input:
                 wake_word_detected = True
+                current_model = "Friday"
                 pygame.mixer.music.load("beep.flac")
                 pygame.mixer.music.play()
-                
+
                 print("Wake word detected!")
                 model_answering = True
                 is_generating = False
@@ -237,7 +265,9 @@ def chatbot():
                 response = random.choice(jarvis_responses)
                 audio = client.generate(text=response, voice=jarvis_voice)
                 play(audio)
+
                 model_answering = False
+                is_generating = True
 
             elif user_input == "exit":
                 print("Goodbye!")
@@ -251,26 +281,40 @@ def chatbot():
             print("Listening for commands...")
             user_input = record_text()
 
-            # if user_input and "open" in user_input and "spotify" in user_input:
-            #     print("Command recognized: Open Spotify!")
-            #     webbrowser.open("spotify:track:2qBmtZnPSQouvADmqaHKxk")
-            #     # Skip further processing of this input
+            # if user_input and "play" in user_input and "Back in Black" in user_input:
+            #     audio = client.generate(text="Right away, sir.", voice=jarvis_voice)
+            #     play(audio)
+            #
+            #     result = sp.search(q="Back in Black", type="track", limit=1)
+            #     track = result['tracks']['items'][0]
+            #
+            #     print(f"Track Name: {track['name']}")
+            #     print(f"Spotify URL: {track['external_urls']['spotify']}")
+            #
             #     continue
 
             if user_input:
                 # Start thinking state
                 is_generating = True
 
-                # Send input to the model
-                result = chat.send_message({"parts": [user_input]})
+                if (current_model == "Jarvis"): #Jarvis model (Gemini)
+                    result = chat.send_message({"parts": [user_input]})
+                elif (current_model == "Friday"): #Friday model (Llama3)
+                    model = OllamaLLM(model="llama3")
+                    result = model.invoke(input=user_input)
 
                 # Done generating the answer
                 is_generating = False
                 model_answering = True
 
-                print(f"Jarvis: {result.text}")
-                audio = client.generate(text=result.text, voice=jarvis_voice)
-                play(audio)
+                if (current_model == "Jarvis"): #Jarvis answering
+                    print(f"Jarvis: {result.text}")
+                    audio = client.generate(text=result.text, voice=jarvis_voice)
+                    play(audio)
+                elif (current_model == "Friday"): #Friday answering
+                    print(f"FRIDAY: {result}")
+                    audio = client.generate(text=result, voice=jarvis_voice)
+                    play(audio)
                 model_answering = False
 
             # Reset wake word detection after command
@@ -298,7 +342,7 @@ while running:
     if is_generating:
         draw_thinking()  # Show thinking state
     elif model_answering:
-        draw_response()  # Show answering state
+        draw_response(current_model) # Show answering state
     else:
         draw_default()  # Default state when nothing is happening
 
