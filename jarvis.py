@@ -16,16 +16,16 @@ from spotipy.oauth2 import SpotifyClientCredentials
 # Initialize Pygame
 pygame.init()
 pygame.mixer.init()
-client = ElevenLabs(api_key="sk_4895d5832580be20287fa0914ec3a9a7da4756056d21b418")
+client = ElevenLabs(api_key="*******")
 r = sr.Recognizer()
 
 # Seting up spotify
-client_id = 'dacc19ea9cc44decbdcb2959cd6eb74a'
-client_secret = '11e970f059dc4265a8fe64aaa80a82bf'
+client_id = '********'
+client_secret = '************'
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=client_id, client_secret=client_secret))
 
 # Setting up Gemini
-os.environ["GEMINI_API_KEY"] = "AIzaSyBzMQutGJnduWwKcTrmvAvP_QiTj8zaJ3I"
+os.environ["GEMINI_API_KEY"] = "***********"
 
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
