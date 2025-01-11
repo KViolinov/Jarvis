@@ -1,6 +1,9 @@
+# works with bulgarian
+
 import os
 import io
 import math
+import time
 import pygame
 import random
 import spotipy
@@ -12,37 +15,37 @@ from langchain_ollama import OllamaLLM
 from elevenlabs import play
 from elevenlabs.client import ElevenLabs
 from spotipy.oauth2 import SpotifyClientCredentials
-from spotipy.oauth2 import SpotifyOAuth
 
+
+from spotipy.oauth2 import SpotifyOAuth
 
 # Initialize Pygame
 pygame.init()
 pygame.mixer.init()
-client = ElevenLabs(api_key="sk_4895d5832580be20287fa0914ec3a9a7da4756056d21b418")
+client = ElevenLabs(api_key="*****")
 r = sr.Recognizer()
 
-
 # Seting up spotify
-client_id = 'dacc19ea9cc44decbdcb2959cd6eb74a'
-client_secret = '11e970f059dc4265a8fe64aaa80a82bf'
+client_id = '*********'
+client_secret = '************'
 sp = spotipy.Spotify(auth_manager=spotipy.SpotifyOAuth(
     client_id=client_id,
     client_secret=client_secret,
     redirect_uri='http://localhost:8888/callback',
-    scope='user-read-currently-playing'))  # Scope for currently playing song
+    scope='user-library-read user-read-playback-state user-modify-playback-state'))  # Scope for currently playing song
 
 # Setting up Gemini
-os.environ["GEMINI_API_KEY"] = "AIzaSyBzMQutGJnduWwKcTrmvAvP_QiTj8zaJ3I"
+os.environ["GEMINI_API_KEY"] = "***********"
 
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 model = genai.GenerativeModel(model_name="gemini-1.5-flash")
 
 system_instruction = (
-    "You are Jarvis, a helpful and informative AI assistant. "
-    "Always respond in a professional and concise manner."
-    "Keep answers short but informative"
-    "Ensure all responses are factually accurate and easy to understand."
+    "Вие сте Джарвис, полезен и информативен AI асистент."
+    "Винаги отговаряйте професионално и кратко, но също се дръж приятелски."
+    "Поддържайте отговорите кратки, но информативни."
+    "Осигурете, че всички отговори са фактологически точни и лесни за разбиране."
 )
 
 chat = model.start_chat(
@@ -59,7 +62,7 @@ chat = model.start_chat(
 # WIDTH, HEIGHT = info.current_w, info.current_h
 # screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
 WIDTH, HEIGHT = 1920, 1080
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("Jarvis Interface")
 
 # Colors
@@ -107,16 +110,17 @@ target_color_2 = list(CYAN)
 color_transition_speed = 10
 
 jarvis_responses = [
-    "Yes sir, what can I assist you with?",
-    "I'm here, how can I help?",
-    "At your service, sir.",
-    "What do you need, sir?",
-    "Listening, how can I assist you?",
-    "How may I be of help today?",
-    "I'm ready, what's your command?",
-    "What can I do for you, sir?",
-    "Always ready to help, sir.",
-    "How can I assist you?"
+    "Тук съм, как мога да помогна?",
+    "Слушам, как мога да Ви асистирам?",
+    "Как мога да Ви помогна днес?",
+    "Как мога да Ви помогна?"
+]
+
+selected_songs = [
+    "Another one bites the dust",
+    "Back in black",
+    "Shoot to Thrill",
+    "Thunderstruck"
 ]
 
 jarvis_voice = "Brian" #deffault voice
@@ -196,7 +200,7 @@ def draw_thinking():
     global target_color_1, target_color_2, is_collided, angle, speed
     target_color_1 = list(ORANGE1)
     target_color_2 = list(ORANGE2)
-    speed = 0.75
+    speed = 0.5
     is_collided = True
     angle += speed
 
@@ -261,12 +265,12 @@ def record_text():
     """Listen for speech and return the recognized text."""
     try:
         with sr.Microphone() as source:
-            print("Listening...")
+            #print("Listening...")
             r.adjust_for_ambient_noise(source, duration=0.2)
             audio = r.listen(source)
 
             # Recognize speech using Google API
-            MyText = r.recognize_google(audio, language="en-US")
+            MyText = r.recognize_google(audio, language="bg-BG")
             print(f"You said: {MyText}")
             return MyText.lower()
 
@@ -291,7 +295,7 @@ def chatbot():
             print("Waiting for wake word...")
             user_input = record_text()
 
-            if user_input and "jarvis" in user_input:
+            if user_input and "джарвис" in user_input:
                 wake_word_detected = True
                 current_model = "Jarvis"
                 pygame.mixer.music.load("beep.flac")
@@ -339,6 +343,55 @@ def chatbot():
             print("Listening for commands...")
             user_input = record_text()
 
+            if user_input is None:
+                print("Error: No input detected.")
+                continue
+
+            if "пусни" in user_input and "музика" in user_input:
+                track_name = random.choice(selected_songs)
+                result = sp.search(q=track_name, limit=1)
+
+                # Get the song's URI
+                track_uri = result['tracks']['items'][0]['uri']
+                print(f"Playing track: {track_name}")
+
+                # Get the current device
+                devices = sp.devices()
+                # Find the LAPTOP_KOSI device by its ID
+                pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
+
+                audio = client.generate(text="Свързвам се със Spotify", voice=jarvis_voice)
+                play(audio)
+
+                # Start playback on the LAPTOP_KOSI device
+                sp.start_playback(device_id=pc_device_id, uris=[track_uri])
+                print("Playback started on LAPTOP_KOSI.")
+                model_answering = False
+                is_generating = False
+                continue
+            elif "пусни" in user_input and "песен" in user_input:
+                track_name = random.choice(selected_songs)
+                result = sp.search(q=track_name, limit=1)
+
+                # Get the song's URI
+                track_uri = result['tracks']['items'][0]['uri']
+                print(f"Playing track: {track_name}")
+
+                # Get the current device
+                devices = sp.devices()
+                # Find the LAPTOP_KOSI device by its ID
+                pc_device_id = '*********'
+
+                audio = client.generate(text="Свързвам се със Spotify", voice=jarvis_voice)
+                play(audio)
+
+                # Start playback on the LAPTOP_KOSI device
+                sp.start_playback(device_id=pc_device_id, uris=[track_uri])
+                print("Playback started on LAPTOP_KOSI.")
+                model_answering = False
+                is_generating = False
+                continue
+
             if user_input:
                 # Start thinking state
                 is_generating = True
@@ -363,10 +416,9 @@ def chatbot():
                     audio = client.generate(text=result, voice=jarvis_voice)
                     play(audio)
                 model_answering = False
+                is_generating = True
 
-            # Reset wake word detection after command
-            wake_word_detected = False
-
+            #wake_word_detected = False
 # Main Loop
 running = True
 chatbot_thread = None
@@ -423,7 +475,7 @@ while running:
     if current_song:
         song_surface = font_small.render(current_song, True, WHITE)
         song_text_x = (WIDTH - song_surface.get_width()) // 2
-        song_text_y = progress_bar_y - 20  # Adjust y-position for song name
+        song_text_y = progress_bar_y - 30  # Adjust y-position for song name
         screen.blit(song_surface, (song_text_x, song_text_y))
 
     # Update Display
