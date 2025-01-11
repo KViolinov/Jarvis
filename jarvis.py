@@ -16,16 +16,16 @@ from spotipy.oauth2 import SpotifyClientCredentials
 # Initialize Pygame
 pygame.init()
 pygame.mixer.init()
-client = ElevenLabs(api_key="*******")
+client = ElevenLabs(api_key="sk_4895d5832580be20287fa0914ec3a9a7da4756056d21b418")
 r = sr.Recognizer()
 
 # Seting up spotify
-client_id = '********'
-client_secret = '************'
+client_id = 'dacc19ea9cc44decbdcb2959cd6eb74a'
+client_secret = '11e970f059dc4265a8fe64aaa80a82bf'
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=client_id, client_secret=client_secret))
 
 # Setting up Gemini
-os.environ["GEMINI_API_KEY"] = "***********"
+os.environ["GEMINI_API_KEY"] = "AIzaSyBzMQutGJnduWwKcTrmvAvP_QiTj8zaJ3I"
 
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
@@ -48,11 +48,11 @@ chat = model.start_chat(
 )
 
 # Screen Dimensions
-info = pygame.display.Info()
-WIDTH, HEIGHT = info.current_w, info.current_h
-screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
-# WIDTH, HEIGHT = 1920, 1080
-# screen = pygame.display.set_mode((WIDTH, HEIGHT))
+# info = pygame.display.Info()
+# WIDTH, HEIGHT = info.current_w, info.current_h
+# screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+WIDTH, HEIGHT = 1920, 1080
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Jarvis Interface")
 
 # Colors
@@ -107,8 +107,7 @@ jarvis_responses = [
     "I'm ready, what's your command?",
     "What can I do for you, sir?",
     "Always ready to help, sir.",
-    "How can I assist you?",
-    "Mhm"
+    "How can I assist you?"
 ]
 
 jarvis_voice = "Brian" #deffault voice
@@ -131,7 +130,6 @@ def blend_color(current, target, speed):
             current[i] += speed if diff > 0 else -speed
         else:
             current[i] = target[i]
-
 
 def draw_particles(surface, particles, target_mode=False):
     """Draws particles on the surface. If target_mode is True, arrange them in a circle and pulse."""
@@ -281,18 +279,6 @@ def chatbot():
             print("Listening for commands...")
             user_input = record_text()
 
-            # if user_input and "play" in user_input and "Back in Black" in user_input:
-            #     audio = client.generate(text="Right away, sir.", voice=jarvis_voice)
-            #     play(audio)
-            #
-            #     result = sp.search(q="Back in Black", type="track", limit=1)
-            #     track = result['tracks']['items'][0]
-            #
-            #     print(f"Track Name: {track['name']}")
-            #     print(f"Spotify URL: {track['external_urls']['spotify']}")
-            #
-            #     continue
-
             if user_input:
                 # Start thinking state
                 is_generating = True
@@ -307,6 +293,7 @@ def chatbot():
                 is_generating = False
                 model_answering = True
 
+                # Answering based on model
                 if (current_model == "Jarvis"): #Jarvis answering
                     print(f"Jarvis: {result.text}")
                     audio = client.generate(text=result.text, voice=jarvis_voice)
