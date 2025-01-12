@@ -1,5 +1,3 @@
-# works with bulgarian
-
 import os
 import io
 import math
@@ -9,25 +7,24 @@ import random
 import spotipy
 import requests
 import webbrowser
+import subprocess
 import speech_recognition as sr
 import google.generativeai as genai
 from langchain_ollama import OllamaLLM
 from elevenlabs import play
 from elevenlabs.client import ElevenLabs
 from spotipy.oauth2 import SpotifyClientCredentials
-
-
 from spotipy.oauth2 import SpotifyOAuth
 
 # Initialize Pygame
 pygame.init()
 pygame.mixer.init()
-client = ElevenLabs(api_key="*****")
+client = ElevenLabs(api_key="sk_6adce62035ad7c7746af82bb9d548ecd0da630b72809da96")
 r = sr.Recognizer()
 
 # Seting up spotify
-client_id = '*********'
-client_secret = '************'
+client_id = 'dacc19ea9cc44decbdcb2959cd6eb74a'
+client_secret = '11e970f059dc4265a8fe64aaa80a82bf'
 sp = spotipy.Spotify(auth_manager=spotipy.SpotifyOAuth(
     client_id=client_id,
     client_secret=client_secret,
@@ -35,7 +32,7 @@ sp = spotipy.Spotify(auth_manager=spotipy.SpotifyOAuth(
     scope='user-library-read user-read-playback-state user-modify-playback-state'))  # Scope for currently playing song
 
 # Setting up Gemini
-os.environ["GEMINI_API_KEY"] = "***********"
+os.environ["GEMINI_API_KEY"] = "AIzaSyBzMQutGJnduWwKcTrmvAvP_QiTj8zaJ3I"
 
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
@@ -113,18 +110,23 @@ jarvis_responses = [
     "Тук съм, как мога да помогна?",
     "Слушам, как мога да Ви асистирам?",
     "Как мога да Ви помогна днес?",
-    "Как мога да Ви помогна?"
+    "Как мога да Ви помогна?",
+    "Да?"
 ]
 
 selected_songs = [
     "Another one bites the dust",
     "Back in black",
     "Shoot to Thrill",
-    "Thunderstruck"
+    "Thunderstruck",
+    "Iron Man",
+    "You Give Love a Bad Name",
+
 ]
 
+status_list = []
+
 jarvis_voice = "Brian" #deffault voice
-#current_model = "Jarvis"
 
 # Ball initial random positions
 random_particles = [{"x": random.randint(0, WIDTH), "y": random.randint(0, HEIGHT), "dx": random.uniform(-2, 2), "dy": random.uniform(-2, 2)} for _ in range(num_particles)]
@@ -217,6 +219,31 @@ def draw_text(surface, text, position, font, color):
     text_surface = font.render(text, True, color)
     surface.blit(text_surface, position)
 
+def extract_keywords(user_input):
+    """
+    Extract keywords from a natural language query.
+    In this case, remove "can you search for" and return the rest.
+    """
+    trigger_phrase = "Може ли да потърсиш за"
+    if user_input.lower().startswith(trigger_phrase):
+        # Extract the part after the trigger phrase
+        return user_input[len(trigger_phrase):].strip()
+    return None
+
+def perform_web_search(search_term):
+    """
+    Perform a web search using the extracted keywords.
+    """
+    if not search_term:
+        print("No valid search term provided.")
+        return
+    # Encode the search term for the URL
+    encoded_term = search_term.replace(" ", "+")
+    # Construct the PowerShell command
+    command = f'Start-Process "firefox.exe" "https://www.google.com/search?q={encoded_term}"'
+    # Execute the PowerShell command
+    subprocess.run(["powershell", "-Command", command], shell=True)
+
 def fetch_current_track():
     """Fetch the current playing track and its album cover."""
     try:
@@ -261,6 +288,14 @@ def draw_progress_bar(surface, x, y, width, height, progress, max_progress):
     # Draw the filled progress bar (foreground)
     pygame.draw.rect(surface, GREEN1, (x, y, progress_width, height))
 
+def update_status(new_status):
+    # Add new status to the list
+    status_list.append(new_status)
+
+    # Ensure the list only has 5 elements
+    if len(status_list) > 5:
+        status_list.pop(0)  # Remove the oldest status (first element)
+
 def record_text():
     """Listen for speech and return the recognized text."""
     try:
@@ -282,7 +317,6 @@ def record_text():
         return None
 
 def chatbot():
-    """Main chatbot loop."""
     global wake_word_detected, model_answering, is_generating, current_model
 
     current_model= "Jarvis"
@@ -347,7 +381,7 @@ def chatbot():
                 print("Error: No input detected.")
                 continue
 
-            if "пусни" in user_input and "музика" in user_input:
+            if "пусни" in user_input and ("песен" in user_input or "музика" in user_input):
                 track_name = random.choice(selected_songs)
                 result = sp.search(q=track_name, limit=1)
 
@@ -360,37 +394,41 @@ def chatbot():
                 # Find the LAPTOP_KOSI device by its ID
                 pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
 
-                audio = client.generate(text="Свързвам се със Spotify", voice=jarvis_voice)
+                audio = client.generate(text="Пускам 5 1 системата", voice=jarvis_voice)
                 play(audio)
+
+                update_status(f"Played {track_name}")
 
                 # Start playback on the LAPTOP_KOSI device
                 sp.start_playback(device_id=pc_device_id, uris=[track_uri])
                 print("Playback started on LAPTOP_KOSI.")
                 model_answering = False
                 is_generating = False
+                wake_word_detected = False
                 continue
-            elif "пусни" in user_input and "песен" in user_input:
-                track_name = random.choice(selected_songs)
-                result = sp.search(q=track_name, limit=1)
 
-                # Get the song's URI
-                track_uri = result['tracks']['items'][0]['uri']
-                print(f"Playing track: {track_name}")
+            if "потърси за" in user_input:
+                # Extract the part after "Може ли да потърсиш за"
+                search_query = user_input.split("потърси за")[1].strip()
 
-                # Get the current device
-                devices = sp.devices()
-                # Find the LAPTOP_KOSI device by its ID
-                pc_device_id = '*********'
+                if search_query:
+                    print(f"Ще търся за: {search_query}")
+                    audio = client.generate(text="Отварям FireFox", voice=jarvis_voice)
+                    play(audio)
 
-                audio = client.generate(text="Свързвам се със Spotify", voice=jarvis_voice)
-                play(audio)
+                    update_status(f"Searched for {search_query}")
 
-                # Start playback on the LAPTOP_KOSI device
-                sp.start_playback(device_id=pc_device_id, uris=[track_uri])
-                print("Playback started on LAPTOP_KOSI.")
-                model_answering = False
-                is_generating = False
-                continue
+                    # Immediately call the web search function to open browser
+                    perform_web_search(search_query)
+                    model_answering = False
+                    is_generating = False
+                    wake_word_detected = False
+                    continue
+                else:
+                    print("Не беше въведен търсен термин.")
+                    audio = client.generate(text="Не можах да разбера какво искате да потърсите.", voice=jarvis_voice)
+                    play(audio)
+                    wake_word_detected = False
 
             if user_input:
                 # Start thinking state
@@ -416,9 +454,9 @@ def chatbot():
                     audio = client.generate(text=result, voice=jarvis_voice)
                     play(audio)
                 model_answering = False
-                is_generating = True
+                is_generating = False
 
-            #wake_word_detected = False
+            wake_word_detected = False
 # Main Loop
 running = True
 chatbot_thread = None
@@ -455,6 +493,21 @@ while running:
     # Draw Text
     draw_text(screen, "Jarvis Interface", (10, 10), font_large, WHITE)
     draw_text(screen, "System Status: All Systems Online", (10, 60), font_small, tuple(current_color_2))
+
+    # Draw the list of statuses under "System Status"
+    start_y = 90  # Starting position for the list of items
+    line_height = 30  # Space between each list item
+
+    for index, status in enumerate(status_list):
+        draw_text(screen, status, (10, start_y + index * line_height), font_small, WHITE)
+
+
+    # Function to update the status list
+    def update_status(new_status):
+        # Add new status to the list and remove the oldest one if needed
+        status_list.append(new_status)
+        if len(status_list) > 5:  # Keep the list size manageable
+            status_list.pop(0)
 
     # Fetch current track periodically (e.g., every 3 seconds)
     if pygame.time.get_ticks() % 3000 < 50:  # Update every 3 seconds
