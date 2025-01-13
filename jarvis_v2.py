@@ -118,12 +118,16 @@ jarvis_responses = [
 ]
 
 selected_songs = [
-    "Another one bites the dust",
+    "Another one bites the dust - Queen",
     "Back in black",
     "Shoot to Thrill",
     "Thunderstruck",
-    "Iron Man",
     "You Give Love a Bad Name",
+    "Highway to Hell - AC/DC",
+    "September - Earth, Wind & Fire",
+    "Should I Stay or Should I Go - Remastered",
+    "If You Want Blood(You've Got It) - AC/DC",
+    "Welcome TO The Jungle - Guns N' Roses"
 ]
 
 status_list = []
