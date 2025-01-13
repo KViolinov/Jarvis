@@ -19,12 +19,15 @@ from spotipy.oauth2 import SpotifyOAuth
 # Initialize Pygame
 pygame.init()
 pygame.mixer.init()
-client = ElevenLabs(api_key="*******")
+client = ElevenLabs(api_key="sk_6adce62035ad7c7746af82bb9d548ecd0da630b72809da96")
 r = sr.Recognizer()
 
+#tv lights
+WLED_IP = "192.168.10.211"
+
 # Seting up spotify
-client_id = '********'
-client_secret = '******'
+client_id = 'dacc19ea9cc44decbdcb2959cd6eb74a'
+client_secret = '11e970f059dc4265a8fe64aaa80a82bf'
 sp = spotipy.Spotify(auth_manager=spotipy.SpotifyOAuth(
     client_id=client_id,
     client_secret=client_secret,
@@ -295,6 +298,18 @@ def draw_progress_bar(surface, x, y, width, height, progress, max_progress):
     # Draw the filled progress bar (foreground)
     pygame.draw.rect(surface, GREEN1, (x, y, progress_width, height))
 
+def set_color(red, green, blue):
+    """Set the color using RGB values."""
+    url = f"http://{WLED_IP}/json/state"
+    data = {
+        "on": True,
+        "bri": 255,  # Optional: brightness
+        "seg": [{
+            "col": [[red, green, blue]]
+        }]
+    }
+    response = requests.post(url, json=data)
+
 def update_status(new_status):
     # Add new status to the list
     status_list.append(new_status)
@@ -439,6 +454,7 @@ def chatbot():
 
             if "лампите в кухнята" in user_input:
                 response = requests.get(turn_on_lights_in_kitchen_url)
+                update_status(f"Turned in kitchen lamps")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
@@ -446,6 +462,7 @@ def chatbot():
 
             if "включи телевизора" in user_input:
                 response = requests.get(turn_on_tv_url)
+                update_status(f"Turned on tv")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
@@ -453,6 +470,7 @@ def chatbot():
 
             if "изключи телевизора" in user_input:
                 response = requests.get(turn_off_tv_url)
+                update_status(f"Turned off tv")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
@@ -540,10 +558,13 @@ while running:
     # Toggle behavior based on whether the model is generating or answering
     if is_generating:
         draw_thinking()  # Show thinking state
+        #set_color(255, 165, 0)  # Orange
     elif model_answering:
         draw_response(current_model) # Show answering state
+        #set_color(0, 219, 0)  # Green
     else:
-        draw_default()  # Default state when nothing is happening
+        draw_default()  # Default state when nothing is happening.
+        #set_color(0, 128, 255)  # Red
 
     # Smooth Color Transition
     blend_color(current_color_1, target_color_1, color_transition_speed)
