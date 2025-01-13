@@ -141,6 +141,7 @@ its_that_time_of_the_year_url = "https://www.virtualsmarthome.xyz/url_routine_tr
 turn_on_tv_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=698b8eaa-b9eb-4b78-a6ca-edce2efdcd46&token=fd86a712-c4e4-42b3-8bcc-b2f6b38c1972&response=html"
 turn_off_tv_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=0b878685-8c00-4c37-a91c-38fb4717673e&token=0bc74392-864a-4a63-bed8-34a860c0356c&response=html"
 turn_on_lights_in_kitchen_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=5ac9eabb-97f0-4678-a8a7-b40510644f02&token=dce257f1-25e6-46a0-8468-4c1b1455a263&response=html"
+i_have_guests_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=be986609-4af2-4519-9947-349b44407c18&token=692195ef-9c8f-4dbd-99b9-c204830f6f57&response=html"
 
 jarvis_voice = "Brian" #deffault voice
 
@@ -510,6 +511,7 @@ def chatbot():
                 continue
 
             if "гости" in user_input:
+                response = requests.get(i_have_guests_url)
                 pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'  # Replace with your device ID
 
                 # Start playback for the playlist
@@ -525,7 +527,7 @@ def chatbot():
                 is_generating = False
                 wake_word_detected = False
                 continue
-            
+
             if "вкъщи съм" in user_input:
                 response = requests.get(i_am_home_url)
                 model_answering = False
