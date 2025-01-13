@@ -19,12 +19,12 @@ from spotipy.oauth2 import SpotifyOAuth
 # Initialize Pygame
 pygame.init()
 pygame.mixer.init()
-client = ElevenLabs(api_key="sk_6adce62035ad7c7746af82bb9d548ecd0da630b72809da96")
+client = ElevenLabs(api_key="*******")
 r = sr.Recognizer()
 
 # Seting up spotify
-client_id = 'dacc19ea9cc44decbdcb2959cd6eb74a'
-client_secret = '11e970f059dc4265a8fe64aaa80a82bf'
+client_id = '********'
+client_secret = '******'
 sp = spotipy.Spotify(auth_manager=spotipy.SpotifyOAuth(
     client_id=client_id,
     client_secret=client_secret,
@@ -121,10 +121,17 @@ selected_songs = [
     "Thunderstruck",
     "Iron Man",
     "You Give Love a Bad Name",
-
 ]
 
 status_list = []
+
+# URL to be activated
+i_am_home_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=0a833484-1f09-4cd5-9c8d-8e20f1cc2900&token=e95a4fed-075a-42a6-b35c-6b58223b9706&response=html"
+its_that_time_of_the_year_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=619451b4-2c1c-43be-966a-cbdb2f2d5ff8&token=112c0a16-d5b3-4d53-8302-83e2caffc586&response=html"
+turn_on_tv_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=698b8eaa-b9eb-4b78-a6ca-edce2efdcd46&token=fd86a712-c4e4-42b3-8bcc-b2f6b38c1972&response=html"
+turn_off_tv_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=0b878685-8c00-4c37-a91c-38fb4717673e&token=0bc74392-864a-4a63-bed8-34a860c0356c&response=html"
+turn_on_lights_in_kitchen_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=5ac9eabb-97f0-4678-a8a7-b40510644f02&token=dce257f1-25e6-46a0-8468-4c1b1455a263&response=html"
+
 
 jarvis_voice = "Brian" #deffault voice
 
@@ -365,7 +372,7 @@ def chatbot():
                 model_answering = False
                 is_generating = True
 
-            elif user_input == "exit":
+            elif user_input == "излез":
                 print("Goodbye!")
                 jarvis_voice = "Brian"
                 audio = client.generate(text="Goodbye!", voice=jarvis_voice)
@@ -394,7 +401,7 @@ def chatbot():
                 # Find the LAPTOP_KOSI device by its ID
                 pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
 
-                audio = client.generate(text="Пускам 5 1 системата", voice=jarvis_voice)
+                audio = client.generate(text="Пускам пет едно системата", voice=jarvis_voice)
                 play(audio)
 
                 update_status(f"Played {track_name}")
@@ -429,6 +436,61 @@ def chatbot():
                     audio = client.generate(text="Не можах да разбера какво искате да потърсите.", voice=jarvis_voice)
                     play(audio)
                     wake_word_detected = False
+
+            if "лампите в кухнята" in user_input:
+                response = requests.get(turn_on_lights_in_kitchen_url)
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
+
+            if "включи телевизора" in user_input:
+                response = requests.get(turn_on_tv_url)
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
+
+            if "изключи телевизора" in user_input:
+                response = requests.get(turn_off_tv_url)
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
+
+            if "онова време от годината" in user_input or "гостенка" in user_input:
+                response = requests.get(its_that_time_of_the_year_url)
+                track_name = random.choice(selected_songs)
+                result = sp.search(q=track_name, limit=1)
+
+                # Get the song's URI
+                track_uri = result['tracks']['items'][0]['uri']
+                print(f"Playing track: {track_name}")
+
+                # Get the current device
+                devices = sp.devices()
+                # Find the LAPTOP_KOSI device by its ID
+                pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
+
+                audio = client.generate(text="Пускам пет едно системата", voice=jarvis_voice)
+                play(audio)
+
+                update_status(f"Played {track_name}")
+
+                # Start playback on the LAPTOP_KOSI device
+                sp.start_playback(device_id=pc_device_id, uris=[track_uri])
+                print("Playback started on LAPTOP_KOSI.")
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
+
+            if "вкъщи съм" in user_input:
+                response = requests.get(i_am_home_url)
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
 
             if user_input:
                 # Start thinking state
