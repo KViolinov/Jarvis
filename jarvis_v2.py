@@ -130,7 +130,7 @@ selected_songs = [
     "September - Earth, Wind & Fire",
     "Should I Stay or Should I Go - Remastered",
     "If You Want Blood(You've Got It) - AC/DC",
-    "Welcome TO The Jungle - Guns N' Roses"
+    "Welcome Tо The Jungle - Guns N' Roses"
 ]
 
 status_list = []
