@@ -10,7 +10,6 @@ import webbrowser
 import subprocess
 import speech_recognition as sr
 import google.generativeai as genai
-from langchain_ollama import OllamaLLM
 from elevenlabs import play
 from elevenlabs.client import ElevenLabs
 from spotipy.oauth2 import SpotifyClientCredentials
@@ -358,7 +357,7 @@ def chatbot():
             print("Waiting for wake word...")
             user_input = record_text()
 
-            if user_input and "джарвис" in user_input:
+            if user_input and "джарвис" in user_input or "Jarvis" in user_input:
                 wake_word_detected = True
                 current_model = "Jarvis"
                 pygame.mixer.music.load("beep.flac")
@@ -369,24 +368,6 @@ def chatbot():
                 is_generating = False
 
                 jarvis_voice = "Brian"
-                response = random.choice(jarvis_responses)
-                audio = client.generate(text=response, voice=jarvis_voice)
-                play(audio)
-
-                model_answering = False
-                is_generating = True
-
-            elif user_input and "friday" in user_input:
-                wake_word_detected = True
-                current_model = "Friday"
-                pygame.mixer.music.load("beep.flac")
-                pygame.mixer.music.play()
-
-                print("Wake word detected!")
-                model_answering = True
-                is_generating = False
-
-                jarvis_voice = "Matilda"
                 response = random.choice(jarvis_responses)
                 audio = client.generate(text=response, voice=jarvis_voice)
                 play(audio)
@@ -541,9 +522,6 @@ def chatbot():
 
                 if (current_model == "Jarvis"): #Jarvis model (Gemini)
                     result = chat.send_message({"parts": [user_input]})
-                elif (current_model == "Friday"): #Friday model (Llama3)
-                    model = OllamaLLM(model="llama3")
-                    result = model.invoke(input=user_input)
 
                 # Done generating the answer
                 is_generating = False
@@ -554,10 +532,7 @@ def chatbot():
                     print(f"Jarvis: {result.text}")
                     audio = client.generate(text=result.text, voice=jarvis_voice)
                     play(audio)
-                elif (current_model == "Friday"): #Friday answering
-                    print(f"FRIDAY: {result}")
-                    audio = client.generate(text=result, voice=jarvis_voice)
-                    play(audio)
+
                 model_answering = False
                 is_generating = False
 
