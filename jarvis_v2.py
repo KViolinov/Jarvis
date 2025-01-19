@@ -18,7 +18,7 @@ from spotipy.oauth2 import SpotifyOAuth
 # Initialize Pygame
 pygame.init()
 pygame.mixer.init()
-client = ElevenLabs(api_key="sk_6adce62035ad7c7746af82bb9d548ecd0da630b72809da96")
+client = ElevenLabs(api_key="sk_375457e4459933cca5be19b0ec98218defb35908fa48df17")
 r = sr.Recognizer()
 
 #tv lights
@@ -357,7 +357,7 @@ def chatbot():
             print("Waiting for wake word...")
             user_input = record_text()
 
-            if user_input and "джарвис" in user_input or "Jarvis" in user_input:
+            if user_input and "джарвис" in user_input:
                 wake_word_detected = True
                 current_model = "Jarvis"
                 pygame.mixer.music.load("beep.flac")
@@ -466,7 +466,7 @@ def chatbot():
 
             if "онова време от годината" in user_input or "гостенка" in user_input:
                 response = requests.get(its_that_time_of_the_year_url)
-                track_name = random.choice(selected_songs)
+                track_name = "I see red"
                 result = sp.search(q=track_name, limit=1)
 
                 # Get the song's URI
@@ -478,7 +478,7 @@ def chatbot():
                 # Find the LAPTOP_KOSI device by its ID
                 pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
 
-                audio = client.generate(text="Пускам пет едно системата", voice=jarvis_voice)
+                audio = client.generate(text="Браво мойто момче", voice=jarvis_voice)
                 play(audio)
 
                 update_status(f"Played {track_name}")
@@ -558,13 +558,13 @@ while running:
     # Toggle behavior based on whether the model is generating or answering
     if is_generating:
         draw_thinking()  # Show thinking state
-        #set_color(255, 165, 0)  # Orange
+        set_color(255, 165, 0)  # Orange
     elif model_answering:
         draw_response(current_model) # Show answering state
-        #set_color(0, 219, 0)  # Green
+        set_color(0, 219, 0)  # Green
     else:
         draw_default()  # Default state when nothing is happening.
-        #set_color(0, 128, 255)  # Red
+        set_color(0, 128, 255)  # Red
 
     # Smooth Color Transition
     blend_color(current_color_1, target_color_1, color_transition_speed)
