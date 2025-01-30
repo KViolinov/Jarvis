@@ -126,16 +126,6 @@ selected_songs = [
 
 status_list = []
 
-list_with_emails = ["bojidarbojinov@outlook.com", "kameliqbojinova@outlook.com"]
-
-# URL to be activated
-i_am_home_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=0a833484-1f09-4cd5-9c8d-8e20f1cc2900&token=e95a4fed-075a-42a6-b35c-6b58223b9706&response=html"
-its_that_time_of_the_year_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=619451b4-2c1c-43be-966a-cbdb2f2d5ff8&token=112c0a16-d5b3-4d53-8302-83e2caffc586&response=html"
-turn_on_tv_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=698b8eaa-b9eb-4b78-a6ca-edce2efdcd46&token=fd86a712-c4e4-42b3-8bcc-b2f6b38c1972&response=html"
-turn_off_tv_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=0b878685-8c00-4c37-a91c-38fb4717673e&token=0bc74392-864a-4a63-bed8-34a860c0356c&response=html"
-turn_on_lights_in_kitchen_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=5ac9eabb-97f0-4678-a8a7-b40510644f02&token=dce257f1-25e6-46a0-8468-4c1b1455a263&response=html"
-i_have_guests_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=be986609-4af2-4519-9947-349b44407c18&token=692195ef-9c8f-4dbd-99b9-c204830f6f57&response=html"
-
 jarvis_voice = "Brian" #deffault voice
 #current_model = "Jarvis"
 
@@ -197,7 +187,6 @@ def parse_natural_time(natural_time):
             raise ValueError(f"Could not parse the given time expression: {natural_time}")
 
     return event_time
-
 
 def create_outlook_appointment(subject, start_time, duration):
     outlook = win32.Dispatch("Outlook.Application")
@@ -321,34 +310,34 @@ def chatbot():
     global wake_word_detected, model_answering, is_generating, current_model
 
     current_model= "Jarvis"
-    wake_word_detected = True
-    model_answering = True
-    is_generating = False
-    audio = client.generate(text="Здравейте, аз съм Джарвис, езиков модел на Джеминай обучен от Гугъл. "
-                                 "Аз съм тук, за да отговоря на въпросите ви, да помогна със задачи или да водя разговори на всякакви теми. "
-                                 "Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Brian")
-    play(audio)
-    model_answering = False
-    
-    wake_word_detected = True
-    current_model = "Friday"
-    model_answering = True
-    is_generating = False
-    audio = client.generate(text="Здравейте, аз съм Friday, езиков модел на LLama3. "
-                                 "Тук съм, за да помогна с въпроси и задачи, като използвам последните технологии за машинно обучение. "
-                                  "Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Matilda")
-    play(audio)
-    model_answering = False
-    
-    wake_word_detected = True
-    current_model = "Veronica"
-    model_answering = True
-    is_generating = False
-    audio = client.generate(text="Здравейте, аз съм Вероника, езиков модел на DeepSeek. "
-                                 "Моето предназначение е да ви предоставям точна информация и да бъда на разположение за всякакви въпроси или задачи, "
-                                 "с които се нуждаете от помощ. Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Sarah")
-    play(audio)
-    model_answering = False
+    # wake_word_detected = True
+    # model_answering = True
+    # is_generating = False
+    # audio = client.generate(text="Здравейте, аз съм Джарвис, езиков модел на Джеминай обучен от Гугъл. "
+    #                              "Аз съм тук, за да отговоря на въпросите ви, да помогна със задачи или да водя разговори на всякакви теми. "
+    #                              "Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Brian")
+    # play(audio)
+    # model_answering = False
+    #
+    # wake_word_detected = True
+    # current_model = "Friday"
+    # model_answering = True
+    # is_generating = False
+    # audio = client.generate(text="Здравейте, аз съм Friday, езиков модел на LLama3. "
+    #                              "Тук съм, за да помогна с въпроси и задачи, като използвам последните технологии за машинно обучение. "
+    #                               "Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Matilda")
+    # play(audio)
+    # model_answering = False
+    #
+    # wake_word_detected = True
+    # current_model = "Veronica"
+    # model_answering = True
+    # is_generating = False
+    # audio = client.generate(text="Здравейте, аз съм Вероника, езиков модел на DeepSeek. "
+    #                              "Моето предназначение е да ви предоставям точна информация и да бъда на разположение за всякакви въпроси или задачи, "
+    #                              "с които се нуждаете от помощ. Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Sarah")
+    # play(audio)
+    # model_answering = False
 
     print("Welcome to Jarvis! Say 'Jarvis' to activate. Say 'exit' to quit.")
 
@@ -482,6 +471,7 @@ def chatbot():
                     audio = client.generate(text="Супер, пращам имейла", voice=jarvis_voice)
                     play(audio)
                     send_email(subject, body, to_email)
+                    update_status(f"Sent an email to {to_email}")
 
                 elif user_input == "не":
                     audio = client.generate(text="Сорка", voice=jarvis_voice)
@@ -519,13 +509,15 @@ def chatbot():
                     audio = client.generate(text=f"Имейл номер {i}, изпратено е от {email.SenderName}, "
                                                  f"темата е {email.Subject}, а съдържанието на писмото е {email.Body}", voice=jarvis_voice)
                     play(audio)
-
+                
+                update_status(f"Read last 3 emails")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
                 continue
 
-            if ("събитие" in user_input or "събити" in user_input or "събития" in user_input) and ("направи" in user_input or "Направи" in user_input or "създай" in user_input or "Създай" in user_input):
+            if (("събитие" in user_input or "събити" in user_input or "събития" in user_input)
+                    and ("създадеш" in user_input or "Създадеш" in user_input or "създай" in user_input or "Създай" in user_input)):
                 # subject of event
                 audio = client.generate(text="Разбира се, как искате да се казва събитието?", voice=jarvis_voice)
                 play(audio)
@@ -555,6 +547,7 @@ def chatbot():
                         voice=jarvis_voice)
                     play(audio)
                     create_outlook_appointment(subject, event_time, duration = 60)
+                    update_status(f"Made an event")
                     model_answering = False
                     is_generating = False
                     wake_word_detected = False
