@@ -57,6 +57,7 @@ chat = model.start_chat(
 # info = pygame.display.Info()
 # WIDTH, HEIGHT = info.current_w, info.current_h
 # screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+
 WIDTH, HEIGHT = 1920, 1080
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Jarvis Interface")
@@ -348,7 +349,7 @@ def chatbot():
         if not wake_word_detected:
             # Listen for the wake word
             print("Waiting for wake word...")
-            user_input = input()
+            user_input = record_text()
 
             if user_input and ("джарвис" in user_input or "джарви" in user_input):
                 wake_word_detected = True
@@ -396,7 +397,7 @@ def chatbot():
         else:
             # Actively listen for commands
             print("Listening for commands...")
-            user_input = input()
+            user_input = record_text()
 
             if user_input is None:
                 print("Error: No input detected.")
@@ -560,7 +561,7 @@ def chatbot():
 
                 # Направи ми събитие за 3 следобяд днес, което да продължи 1 час, и да се казва "нахрани котката"
 
-            if "виждаш" in user_input and "какво" in user_input: #currently not working
+            if "виждаш" in user_input and "какво" in user_input: # currently not working
                 # Open the webcam
                 cap = cv2.VideoCapture(0)
 
@@ -623,7 +624,8 @@ def chatbot():
                 audio = client.generate(text=response.text, voice=jarvis_voice)
                 play(audio)
 
-            if ("отвори" in user_input or "отвориш" in user_input) and "word" in user_input:
+            if (("отвори" in user_input or "отвориш" in user_input)
+                    and ("word" in user_input or "wor" in user_input)): # currently not working
                 audio = client.generate(text="Разбира се, отварям Word. Само секунда", voice=jarvis_voice)
                 play(audio)
 
@@ -634,6 +636,9 @@ def chatbot():
                 # Create a new document
                 doc = word.Documents.Add()
 
+                # Get the range object for the entire document
+                range_obj = doc.Range()
+
                 audio = client.generate(text="Готов съм. Слушам и записвам. Кажете думата Край за да спра да записвам", voice=jarvis_voice)
                 play(audio)
 
@@ -641,31 +646,29 @@ def chatbot():
                     with sr.Microphone() as source:
                         try:
                             print("Listening for...")
-                            input = record_text()
-                            print(f"You said: {input}")
+                            input_text = record_text()
+                            print(f"You said: {input_text}")
 
                             # Stop listening when "end" is said
-                            if input.lower() == "end":
+                            if input_text.lower() == "край":
                                 audio = client.generate(
                                     text="Спрях да записвам, файла е запазен в папка Downloads",
                                     voice=jarvis_voice)
                                 play(audio)
                                 break
 
-                            # Append text to Word document in real-time
-                            doc.Content.Text += input + ". "
-                            time.sleep(1)  # Small delay for realism
+                            # Insert text into the document
+                            range_obj.InsertAfter(input_text + ".\n")
+
+                            time.sleep(1)  # Малко забавяне за реализъм
 
                         except sr.UnknownValueError:
                             print("Could not understand, try again.")
                         except sr.RequestError:
                             print("Speech recognition service error.")
 
-                # Save the document
+                # Запазване на документа
                 doc.SaveAs(r"D:\downloads\proba1.docx")
-
-                # Keep Word open after the script ends
-                input("Press Enter to close Word...")
 
                 # Close Word
                 doc.Close()
