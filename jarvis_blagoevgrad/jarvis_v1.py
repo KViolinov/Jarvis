@@ -19,8 +19,6 @@ import time
 from PIL import Image
 import numpy as np
 
-
-
 # Initialize Pygame
 pygame.init()
 pygame.mixer.init()
@@ -580,6 +578,8 @@ def chatbot():
                 # Countdown from 3
                 for i in range(3, 0, -1):
                     # Display the countdown on the OpenCV window
+                    pygame.mixer.music.load("camera_shutter.wav")
+                    pygame.mixer.music.play()
                     ret, frame = cap.read()
                     if not ret:
                         print("Error: Failed to capture image.")
@@ -622,6 +622,55 @@ def chatbot():
 
                 audio = client.generate(text=response.text, voice=jarvis_voice)
                 play(audio)
+
+            if ("отвори" in user_input or "отвориш" in user_input) and "word" in user_input:
+                audio = client.generate(text="Разбира се, отварям Word. Само секунда", voice=jarvis_voice)
+                play(audio)
+
+                # Start Microsoft Word
+                word = win32.Dispatch("Word.Application")
+                word.Visible = True  # Make Word visible
+
+                # Create a new document
+                doc = word.Documents.Add()
+
+                audio = client.generate(text="Готов съм. Слушам и записвам. Кажете думата Край за да спра да записвам", voice=jarvis_voice)
+                play(audio)
+
+                while True:
+                    with sr.Microphone() as source:
+                        try:
+                            print("Listening for...")
+                            input = record_text()
+                            print(f"You said: {input}")
+
+                            # Stop listening when "end" is said
+                            if input.lower() == "end":
+                                audio = client.generate(
+                                    text="Спрях да записвам, файла е запазен в папка Downloads",
+                                    voice=jarvis_voice)
+                                play(audio)
+                                break
+
+                            # Append text to Word document in real-time
+                            doc.Content.Text += input + ". "
+                            time.sleep(1)  # Small delay for realism
+
+                        except sr.UnknownValueError:
+                            print("Could not understand, try again.")
+                        except sr.RequestError:
+                            print("Speech recognition service error.")
+
+                # Save the document
+                doc.SaveAs(r"D:\downloads\proba1.docx")
+
+                # Keep Word open after the script ends
+                input("Press Enter to close Word...")
+
+                # Close Word
+                doc.Close()
+                word.Quit()
+
 
             if user_input:
                 # Start thinking state
