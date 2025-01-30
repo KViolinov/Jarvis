@@ -14,6 +14,11 @@ from spotipy.oauth2 import SpotifyClientCredentials
 import win32com.client as win32
 from datetime import datetime, timedelta
 import dateparser
+import cv2
+import time
+from PIL import Image
+import numpy as np
+
 
 
 # Initialize Pygame
@@ -313,7 +318,7 @@ def chatbot():
     # wake_word_detected = True
     # model_answering = True
     # is_generating = False
-    # audio = client.generate(text="Здравейте, аз съм Джарвис, езиков модел на Джеминай обучен от Гугъл. "
+    # audio = client.generate(text="Здравейте, аз съм Джарвис, езиков модел на Gemini обучен от Google. "
     #                              "Аз съм тук, за да отговоря на въпросите ви, да помогна със задачи или да водя разговори на всякакви теми. "
     #                              "Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Brian")
     # play(audio)
@@ -345,7 +350,7 @@ def chatbot():
         if not wake_word_detected:
             # Listen for the wake word
             print("Waiting for wake word...")
-            user_input = record_text()
+            user_input = input()
 
             if user_input and ("джарвис" in user_input or "джарви" in user_input):
                 wake_word_detected = True
@@ -393,7 +398,7 @@ def chatbot():
         else:
             # Actively listen for commands
             print("Listening for commands...")
-            user_input = record_text()
+            user_input = input()
 
             if user_input is None:
                 print("Error: No input detected.")
@@ -509,7 +514,7 @@ def chatbot():
                     audio = client.generate(text=f"Имейл номер {i}, изпратено е от {email.SenderName}, "
                                                  f"темата е {email.Subject}, а съдържанието на писмото е {email.Body}", voice=jarvis_voice)
                     play(audio)
-                
+
                 update_status(f"Read last 3 emails")
                 model_answering = False
                 is_generating = False
@@ -556,6 +561,67 @@ def chatbot():
                     print(f"❌ Error: {e}")
 
                 # Направи ми събитие за 3 следобяд днес, което да продължи 1 час, и да се казва "нахрани котката"
+
+            if "виждаш" in user_input and "какво" in user_input: #currently not working
+                # Open the webcam
+                cap = cv2.VideoCapture(0)
+
+                if not cap.isOpened():
+                    print("Error: Could not open webcam.")
+                    exit()
+
+                # Create a named window
+                cv2.namedWindow("Capture Window", cv2.WINDOW_NORMAL)
+
+                # Create a named window and resize it
+                cv2.namedWindow("Capture Window", cv2.WINDOW_NORMAL)
+                cv2.resizeWindow("Capture Window", 800, 600)  # Set window size to 800x600
+
+                # Countdown from 3
+                for i in range(3, 0, -1):
+                    # Display the countdown on the OpenCV window
+                    ret, frame = cap.read()
+                    if not ret:
+                        print("Error: Failed to capture image.")
+                        break
+
+                    # Add countdown text (centered)
+                    cv2.putText(frame, str(i), (350, 300), cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 0, 255), 5)
+
+                    # Show frame
+                    cv2.imshow("Capture Window", frame)
+                    cv2.waitKey(1000)  # Wait for 1 second
+
+                # Capture the final image when countdown hits 1
+                ret, frame_bgr = cap.read()
+                if not ret:
+                    print("Error: Failed to capture final image.")
+                    cap.release()
+                    cv2.destroyAllWindows()
+                    exit()
+
+                # Convert BGR to RGB for Gemini
+                frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+
+                # Convert to PIL Image
+                captured_image = Image.fromarray(frame_rgb)
+
+                # Close the OpenCV window
+                cap.release()
+                cv2.destroyAllWindows()
+
+                # Provide a prompt
+                prompt = "Опиши какво виждаш на снимката."
+
+                # Send the image to the Gemini Vision model
+                response = model.generate_content([prompt, captured_image])
+
+                # Print the AI's response
+                print("\nAI Response:")
+                print(response.text)
+
+                audio = client.generate(text=response.text, voice=jarvis_voice)
+                play(audio)
 
             if user_input:
                 # Start thinking state
