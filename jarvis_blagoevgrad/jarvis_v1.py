@@ -404,26 +404,82 @@ def chatbot():
                 continue
 
             if "пусни" in user_input and ("песен" in user_input or "музика" in user_input):
-                track_name = random.choice(selected_songs)
-                result = sp.search(q=track_name, limit=1)
-
-                # Get the song's URI
-                track_uri = result['tracks']['items'][0]['uri']
-                print(f"Playing track: {track_name}")
-
-                # Get the current device
-                devices = sp.devices()
-                # Find the LAPTOP_KOSI device by its ID
-                pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
-
-                audio = client.generate(text="Пускам пет едно системата", voice=jarvis_voice)
+                audio = client.generate(text="Разбира се, имате ли някакви предпочитания за песен?", voice=jarvis_voice)
                 play(audio)
 
-                update_status(f"Played {track_name}")
+                print("Listening for song info...")
+                user_input = record_text()
 
-                # Start playback on the LAPTOP_KOSI device
-                sp.start_playback(device_id=pc_device_id, uris=[track_uri])
-                print("Playback started on LAPTOP_KOSI.")
+                if "да" in user_input:
+                    audio = client.generate(text="Добре, коя песен бихте желали да ви пусна?",
+                                            voice=jarvis_voice)
+                    play(audio)
+
+                    print("Listening for specific song...")
+                    user_input = record_text()
+
+                    audio = client.generate(text=f"Пускам, {user_input}",
+                                            voice=jarvis_voice)
+                    play(audio)
+                    track_name = user_input
+                    result = sp.search(q=track_name, limit=1)
+
+                    # Get the song's URI
+                    track_uri = result['tracks']['items'][0]['uri']
+                    print(f"Playing track: {track_name}")
+
+                    # Get the current device
+                    devices = sp.devices()
+                    # Find the LAPTOP_KOSI device by its ID
+                    pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
+                    update_status(f"Played {track_name}")
+
+                    # Start playback on the LAPTOP_KOSI device
+                    sp.start_playback(device_id=pc_device_id, uris=[track_uri])
+                    print("Playback started on LAPTOP_KOSI.")
+
+                elif "не" in user_input:
+                    audio = client.generate(text="Пускам тогава от избрания от вас списък?",
+                                            voice=jarvis_voice)
+                    play(audio)
+
+                    track_name = random.choice(selected_songs)
+                    result = sp.search(q=track_name, limit=1)
+
+                    # Get the song's URI
+                    track_uri = result['tracks']['items'][0]['uri']
+                    print(f"Playing track: {track_name}")
+
+                    # Get the current device
+                    devices = sp.devices()
+                    # Find the LAPTOP_KOSI device by its ID
+                    pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
+                    update_status(f"Played {track_name}")
+
+                    # Start playback on the LAPTOP_KOSI device
+                    sp.start_playback(device_id=pc_device_id, uris=[track_uri])
+                    print("Playback started on LAPTOP_KOSI.")
+
+                # track_name = random.choice(selected_songs)
+                # result = sp.search(q=track_name, limit=1)
+                #
+                # # Get the song's URI
+                # track_uri = result['tracks']['items'][0]['uri']
+                # print(f"Playing track: {track_name}")
+                #
+                # # Get the current device
+                # devices = sp.devices()
+                # # Find the LAPTOP_KOSI device by its ID
+                # pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
+                #
+                # audio = client.generate(text="Пускам пет едно системата", voice=jarvis_voice)
+                # play(audio)
+                #
+                # update_status(f"Played {track_name}")
+                #
+                # # Start playback on the LAPTOP_KOSI device
+                # sp.start_playback(device_id=pc_device_id, uris=[track_uri])
+                # print("Playback started on LAPTOP_KOSI.")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
