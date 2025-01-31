@@ -1,16 +1,20 @@
 import os
+import io
 import math
+import time
 import pygame
 import random
 import spotipy
+import requests
 import webbrowser
+import subprocess
+from langchain_ollama import OllamaLLM
 import speech_recognition as sr
 import google.generativeai as genai
-from Demos.OpenEncryptedFileRaw import dst_fname
-from langchain_ollama import OllamaLLM
 from elevenlabs import play
 from elevenlabs.client import ElevenLabs
 from spotipy.oauth2 import SpotifyClientCredentials
+from spotipy.oauth2 import SpotifyOAuth
 import win32com.client as win32
 from datetime import datetime, timedelta
 import dateparser
@@ -18,17 +22,30 @@ import cv2
 import time
 from PIL import Image
 import numpy as np
+from ctypes import cast, POINTER
+from comtypes import CLSCTX_ALL
+from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 
 # Initialize Pygame
 pygame.init()
 pygame.mixer.init()
-client = ElevenLabs(api_key="sk_b08176d1b7fcb93fcbac72a2b3e57a97be11f8754bff8379")
+client = ElevenLabs(api_key="sk_a0b46e0f0fc265d7f2ce18614db1cd13d1ce849b49a02207")
 r = sr.Recognizer()
+
+
+#tv lights
+WLED_IP = "192.168.10.211"
 
 # Seting up spotify
 client_id = 'dacc19ea9cc44decbdcb2959cd6eb74a'
 client_secret = '11e970f059dc4265a8fe64aaa80a82bf'
-sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(client_id=client_id, client_secret=client_secret))
+sp = spotipy.Spotify(auth_manager=spotipy.SpotifyOAuth(
+    client_id=client_id,
+    client_secret=client_secret,
+    redirect_uri='http://localhost:8888/callback',
+    scope='user-library-read user-read-playback-state user-modify-playback-state'))  # Scope for currently playing song
+
+jazz_playlist_url = "spotify:playlist/60joMYdXRjtwwfyERiGu4c?si=42cc553fb755446d"
 
 # Setting up Gemini
 os.environ["GEMINI_API_KEY"] = "AIzaSyBzMQutGJnduWwKcTrmvAvP_QiTj8zaJ3I"
@@ -57,9 +74,8 @@ chat = model.start_chat(
 # info = pygame.display.Info()
 # WIDTH, HEIGHT = info.current_w, info.current_h
 # screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
-
 WIDTH, HEIGHT = 1920, 1080
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
+screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("Jarvis Interface")
 
 # Colors
@@ -73,8 +89,8 @@ GREEN1 = (0, 219, 0)
 GREEN2 = (4, 201, 4)
 PINK1 = (255, 182, 193)  # Light Pink
 PINK2 = (255, 105, 180)  # Hot Pink
-PURPLE1 = (157, 0, 255)
-PURPLE2 = (164, 34, 245)
+font_large = pygame.font.Font(None, 48)
+font_small = pygame.font.Font(None, 32)
 
 # Fonts
 font_large = pygame.font.Font(pygame.font.get_default_font(), 36)
@@ -111,8 +127,8 @@ jarvis_responses = [
     "Слушам, как мога да Ви асистирам?",
     "Как мога да Ви помогна днес?",
     "Как мога да Ви помогна?",
-    "Да?",
-    "Слушам?"
+    "Да",
+    "Слушам"
 ]
 
 selected_songs = [
@@ -131,7 +147,6 @@ selected_songs = [
 status_list = []
 
 jarvis_voice = "Brian" #deffault voice
-#current_model = "Jarvis"
 
 # Ball initial random positions
 random_particles = [{"x": random.randint(0, WIDTH), "y": random.randint(0, HEIGHT), "dx": random.uniform(-2, 2), "dy": random.uniform(-2, 2)} for _ in range(num_particles)]
@@ -148,6 +163,57 @@ current_artist = ""
 album_cover = None
 current_progress = 0
 song_duration = 0
+
+def set_volume(level):
+    """Sets the system volume (Windows - using pycaw)."""
+    try:
+        devices = AudioUtilities.GetAudioEndpoints(CLSCTX_ALL, IAudioEndpointVolume)
+        for device in devices:
+            if device.IsDefaultAudioEndpoint(0):
+                volume = device.Activate(IAudioEndpointVolume)
+                level = max(0, min(100, level))
+                volume.SetMasterVolumeLevelScalar(level / 100, None)
+                print(f"Volume set to {level}%")
+                return
+        print("No default audio endpoint found") # Print if no default audio endpoint is found
+    except Exception as e:
+        print(f"Error setting volume: {e}")
+
+def get_volume():
+    """Gets the current system volume (Windows - using pycaw)."""
+    try:
+        devices = AudioUtilities.GetAudioEndpoints(CLSCTX_ALL, IAudioEndpointVolume)
+        for device in devices:
+            if device.IsDefaultAudioEndpoint(0):  # 0 for audio render role
+                volume = device.Activate(IAudioEndpointVolume)
+                current_volume = volume.GetMasterVolumeLevelScalar() * 100  # Convert to percentage
+                return int(current_volume)  # Return as an integer
+        return None  # Return None if no default audio endpoint is found
+    except Exception as e:
+        print(f"Error getting volume: {e}")
+        return None
+
+def mute():
+    set_volume(0)  # Mute by setting volume to 0
+
+def unmute():
+    """Unmutes the system volume (sets it to a non-zero value)."""
+    set_volume(50)  # Or any other non-zero value you prefer (e.g., 25, 75)
+    print("System unmuted.")
+
+def increase_volume(increment):
+    current_volume = get_volume()
+    if current_volume is None:
+        print("Could not retrieve current volume, cannot increase")
+        return
+    set_volume(min(100, current_volume + increment))
+
+def decrease_volume(decrement):
+    current_volume = get_volume()
+    if current_volume is None:
+        print("Could not retrieve current volume, cannot decrease")
+        return
+    set_volume(max(0, current_volume - decrement))
 
 def send_email(subject, body, to_email):
     outlook = win32.Dispatch('outlook.application')
@@ -252,9 +318,7 @@ def draw_response(model):
     elif model == "Friday":
         target_color_1 = list(PINK1)
         target_color_2 = list(PINK2)
-    elif model == "Veronica":
-        target_color_1 = list(PURPLE1)
-        target_color_2 = list(PURPLE2)
+
     speed = 1
     is_collided = True
     angle += speed
@@ -264,7 +328,7 @@ def draw_thinking():
     global target_color_1, target_color_2, is_collided, angle, speed
     target_color_1 = list(ORANGE1)
     target_color_2 = list(ORANGE2)
-    speed = 1.5
+    speed = 0.5
     is_collided = True
     angle += speed
 
@@ -281,6 +345,87 @@ def draw_text(surface, text, position, font, color):
     text_surface = font.render(text, True, color)
     surface.blit(text_surface, position)
 
+def extract_keywords(user_input):
+    """
+    Extract keywords from a natural language query.
+    In this case, remove "can you search for" and return the rest.
+    """
+    trigger_phrase = "Може ли да потърсиш за"
+    if user_input.lower().startswith(trigger_phrase):
+        # Extract the part after the trigger phrase
+        return user_input[len(trigger_phrase):].strip()
+    return None
+
+def perform_web_search(search_term):
+    """
+    Perform a web search using the extracted keywords.
+    """
+    if not search_term:
+        print("No valid search term provided.")
+        return
+    # Encode the search term for the URL
+    encoded_term = search_term.replace(" ", "+")
+    # Construct the PowerShell command
+    command = f'Start-Process "firefox.exe" "https://www.google.com/search?q={encoded_term}"'
+    # Execute the PowerShell command
+    subprocess.run(["powershell", "-Command", command], shell=True)
+
+def fetch_current_track():
+    """Fetch the current playing track and its album cover."""
+    try:
+        current_track = sp.currently_playing()
+        if current_track and current_track['is_playing']:
+            song = current_track['item']['name']
+            artist = ", ".join([a['name'] for a in current_track['item']['artists']])
+            album_cover_url = current_track['item']['album']['images'][0]['url']
+            progress_ms = current_track['progress_ms']  # Progress in milliseconds
+            duration_ms = current_track['item']['duration_ms']  # Duration in milliseconds
+            return song, artist, album_cover_url, progress_ms, duration_ms
+        return None, None, None, 0, 0
+    except Exception as e:
+        print(f"Error fetching track: {e}")
+        return None, None, None, 0, 0
+
+def load_album_cover(url):
+    """Download and convert the album cover image to a Pygame surface."""
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            image_data = io.BytesIO(response.content)
+            image = pygame.image.load(image_data, "jpg")
+            return pygame.transform.scale(image, (300, 300))  # Scale to 300x300
+    except Exception as e:
+        print(f"Error loading album cover: {e}")
+    return None
+
+def draw_progress_bar(surface, x, y, width, height, progress, max_progress):
+    """Draw a progress bar to represent the song timeline."""
+    # Check if max_progress is non-zero to avoid division by zero
+    if max_progress > 0:
+        # Calculate the progress ratio
+        progress_ratio = progress / max_progress
+        progress_width = int(width * progress_ratio)
+    else:
+        progress_width = 0  # If duration is zero, show no progress
+
+    # Draw the empty progress bar (background)
+    pygame.draw.rect(surface, (50, 50, 50), (x, y, width, height))
+
+    # Draw the filled progress bar (foreground)
+    pygame.draw.rect(surface, GREEN1, (x, y, progress_width, height))
+
+def set_color(red, green, blue):
+    """Set the color using RGB values."""
+    url = f"http://{WLED_IP}/json/state"
+    data = {
+        "on": True,
+        "bri": 255,  # Optional: brightness
+        "seg": [{
+            "col": [[red, green, blue]]
+        }]
+    }
+    response = requests.post(url, json=data)
+
 def update_status(new_status):
     # Add new status to the list
     status_list.append(new_status)
@@ -293,7 +438,7 @@ def record_text():
     """Listen for speech and return the recognized text."""
     try:
         with sr.Microphone() as source:
-            print("Listening...")
+            #print("Listening...")
             r.adjust_for_ambient_noise(source, duration=0.2)
             audio = r.listen(source)
 
@@ -310,7 +455,6 @@ def record_text():
         return None
 
 def chatbot():
-    """Main chatbot loop."""
     global wake_word_detected, model_answering, is_generating, current_model
 
     current_model= "Jarvis"
@@ -387,7 +531,7 @@ def chatbot():
                 model_answering = False
                 is_generating = True
 
-            elif user_input == "exit":
+            elif user_input == "излез":
                 print("Goodbye!")
                 jarvis_voice = "Brian"
                 audio = client.generate(text="Goodbye!", voice=jarvis_voice)
@@ -404,82 +548,26 @@ def chatbot():
                 continue
 
             if "пусни" in user_input and ("песен" in user_input or "музика" in user_input):
-                audio = client.generate(text="Разбира се, имате ли някакви предпочитания за песен?", voice=jarvis_voice)
+                track_name = random.choice(selected_songs)
+                result = sp.search(q=track_name, limit=1)
+
+                # Get the song's URI
+                track_uri = result['tracks']['items'][0]['uri']
+                print(f"Playing track: {track_name}")
+
+                # Get the current device
+                devices = sp.devices()
+                # Find the LAPTOP_KOSI device by its ID
+                pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
+
+                audio = client.generate(text="Пускам пет едно системата", voice=jarvis_voice)
                 play(audio)
 
-                print("Listening for song info...")
-                user_input = record_text()
+                update_status(f"Played {track_name}")
 
-                if "да" in user_input:
-                    audio = client.generate(text="Добре, коя песен бихте желали да ви пусна?",
-                                            voice=jarvis_voice)
-                    play(audio)
-
-                    print("Listening for specific song...")
-                    user_input = record_text()
-
-                    audio = client.generate(text=f"Пускам, {user_input}",
-                                            voice=jarvis_voice)
-                    play(audio)
-                    track_name = user_input
-                    result = sp.search(q=track_name, limit=1)
-
-                    # Get the song's URI
-                    track_uri = result['tracks']['items'][0]['uri']
-                    print(f"Playing track: {track_name}")
-
-                    # Get the current device
-                    devices = sp.devices()
-                    # Find the LAPTOP_KOSI device by its ID
-                    pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
-                    update_status(f"Played {track_name}")
-
-                    # Start playback on the LAPTOP_KOSI device
-                    sp.start_playback(device_id=pc_device_id, uris=[track_uri])
-                    print("Playback started on LAPTOP_KOSI.")
-
-                elif "не" in user_input:
-                    audio = client.generate(text="Пускам тогава от избрания от вас списък?",
-                                            voice=jarvis_voice)
-                    play(audio)
-
-                    track_name = random.choice(selected_songs)
-                    result = sp.search(q=track_name, limit=1)
-
-                    # Get the song's URI
-                    track_uri = result['tracks']['items'][0]['uri']
-                    print(f"Playing track: {track_name}")
-
-                    # Get the current device
-                    devices = sp.devices()
-                    # Find the LAPTOP_KOSI device by its ID
-                    pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
-                    update_status(f"Played {track_name}")
-
-                    # Start playback on the LAPTOP_KOSI device
-                    sp.start_playback(device_id=pc_device_id, uris=[track_uri])
-                    print("Playback started on LAPTOP_KOSI.")
-
-                # track_name = random.choice(selected_songs)
-                # result = sp.search(q=track_name, limit=1)
-                #
-                # # Get the song's URI
-                # track_uri = result['tracks']['items'][0]['uri']
-                # print(f"Playing track: {track_name}")
-                #
-                # # Get the current device
-                # devices = sp.devices()
-                # # Find the LAPTOP_KOSI device by its ID
-                # pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
-                #
-                # audio = client.generate(text="Пускам пет едно системата", voice=jarvis_voice)
-                # play(audio)
-                #
-                # update_status(f"Played {track_name}")
-                #
-                # # Start playback on the LAPTOP_KOSI device
-                # sp.start_playback(device_id=pc_device_id, uris=[track_uri])
-                # print("Playback started on LAPTOP_KOSI.")
+                # Start playback on the LAPTOP_KOSI device
+                sp.start_playback(device_id=pc_device_id, uris=[track_uri])
+                print("Playback started on LAPTOP_KOSI.")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
@@ -509,7 +597,8 @@ def chatbot():
                 print("Listening for email info...")
                 body = record_text()
 
-                audio = client.generate(text="Супер, преди да изпратя имейла, ще ви кажа какво съм си записал", voice=jarvis_voice)
+                audio = client.generate(text="Супер, преди да изпратя имейла, ще ви кажа какво съм си записал",
+                                        voice=jarvis_voice)
                 play(audio)
 
                 if to_email == "bojidarbojinov@outlook.com":
@@ -518,7 +607,8 @@ def chatbot():
                 elif to_email == "kameliqbojinova@outlook.com":
                     audio = client.generate(text="Имейла е към Камелия Божинова (майка ви)", voice=jarvis_voice)
                     play(audio)
-                audio = client.generate(text="Темата на писмото е " + subject + "И съдържанието на писмото е " + body, voice=jarvis_voice)
+                audio = client.generate(text="Темата на писмото е " + subject + "И съдържанието на писмото е " + body,
+                                        voice=jarvis_voice)
                 play(audio)
 
                 audio = client.generate(text="Всичко наред ли е с информацията в писмото?", voice=jarvis_voice)
@@ -527,13 +617,13 @@ def chatbot():
                 print("Listening for approval...")
                 user_input = record_text()
 
-                if user_input == "да":
+                if "да" in user_input:
                     audio = client.generate(text="Супер, пращам имейла", voice=jarvis_voice)
                     play(audio)
                     send_email(subject, body, to_email)
                     update_status(f"Sent an email to {to_email}")
 
-                elif user_input == "не":
+                elif "не" in user_input:
                     audio = client.generate(text="Сорка", voice=jarvis_voice)
                     play(audio)
 
@@ -617,7 +707,7 @@ def chatbot():
 
                 # Направи ми събитие за 3 следобяд днес, което да продължи 1 час, и да се казва "нахрани котката"
 
-            if "виждаш" in user_input and "какво" in user_input: # currently not working
+            if ("виждаш" in user_input or "вижда" in user_input) and "какво" in user_input: # currently not working
                 # Open the webcam
                 cap = cv2.VideoCapture(0)
 
@@ -635,8 +725,6 @@ def chatbot():
                 # Countdown from 3
                 for i in range(3, 0, -1):
                     # Display the countdown on the OpenCV window
-                    pygame.mixer.music.load("camera_shutter.wav")
-                    pygame.mixer.music.play()
                     ret, frame = cap.read()
                     if not ret:
                         print("Error: Failed to capture image.")
@@ -650,6 +738,8 @@ def chatbot():
                     cv2.waitKey(1000)  # Wait for 1 second
 
                 # Capture the final image when countdown hits 1
+                pygame.mixer.music.load("camera_shutter.wav")
+                pygame.mixer.music.play()
                 ret, frame_bgr = cap.read()
                 if not ret:
                     print("Error: Failed to capture final image.")
@@ -680,22 +770,30 @@ def chatbot():
                 audio = client.generate(text=response.text, voice=jarvis_voice)
                 play(audio)
 
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
+
             if (("отвори" in user_input or "отвориш" in user_input)
-                    and ("word" in user_input or "wor" in user_input)): # currently not working
+                    and ("word" in user_input or "wor" in user_input)):  # currently not working
                 audio = client.generate(text="Разбира се, отварям Word. Само секунда", voice=jarvis_voice)
                 play(audio)
 
-                # Start Microsoft Word
-                word = win32.Dispatch("Word.Application")
-                word.Visible = True  # Make Word visible
+                word = win32.gencache.EnsureDispatch('Word.Application')
+                word.Visible = True  # Optional: Make Word visible
 
-                # Create a new document
-                doc = word.Documents.Add()
+                # Check if any documents are open. If not, create one.
+                if word.Documents.Count == 0:
+                    word.Documents.Add()  # Add a new document
 
-                # Get the range object for the entire document
-                range_obj = doc.Range()
+                # *Crucial*: Wait a short time for Word to fully initialize and the document to open.
+                time.sleep(2)  # Wait for 2 seconds (adjust as needed)
 
-                audio = client.generate(text="Готов съм. Слушам и записвам. Кажете думата Край за да спра да записвам", voice=jarvis_voice)
+                selection = word.Selection
+
+                audio = client.generate(text="Готов съм. Слушам и записвам. Кажете думата Край за да спра да записвам",
+                                        voice=jarvis_voice)
                 play(audio)
 
                 while True:
@@ -713,8 +811,7 @@ def chatbot():
                                 play(audio)
                                 break
 
-                            # Insert text into the document
-                            range_obj.InsertAfter(input_text + ".\n")
+                            selection.TypeText(input_text + ". ")
 
                             time.sleep(1)  # Малко забавяне за реализъм
 
@@ -723,13 +820,45 @@ def chatbot():
                         except sr.RequestError:
                             print("Speech recognition service error.")
 
-                # Запазване на документа
-                doc.SaveAs(r"D:\downloads\proba1.docx")
+                # # Запазване на документа
+                # doc.SaveAs(r"D:\downloads\proba1.docx")
+                #
+                # # Close Word
+                # doc.Close()
+                # word.Quit()
 
-                # Close Word
-                doc.Close()
-                word.Quit()
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
 
+            if "намали" in user_input and "звука" in user_input:
+                decrease_volume(10)
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
+
+            if "усили" in user_input and "звука" in user_input:
+                increase_volume(10)
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
+
+            if "заглуши" in user_input and "звука" in user_input:
+                mute()
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
+
+            if "отглуши" in user_input and "звука" in user_input:
+                unmute()
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
 
             if user_input:
                 # Start thinking state
@@ -755,10 +884,9 @@ def chatbot():
                     audio = client.generate(text=result, voice=jarvis_voice)
                     play(audio)
                 model_answering = False
+                is_generating = False
 
-            # Reset wake word detection after command
             wake_word_detected = False
-
 # Main Loop
 running = True
 chatbot_thread = None
@@ -780,10 +908,13 @@ while running:
     # Toggle behavior based on whether the model is generating or answering
     if is_generating:
         draw_thinking()  # Show thinking state
+        #set_color(255, 165, 0)  # Orange
     elif model_answering:
         draw_response(current_model) # Show answering state
+        #set_color(0, 219, 0)  # Green
     else:
-        draw_default()  # Default state when nothing is happening
+        draw_default()  # Default state when nothing is happening.
+        #set_color(0, 128, 255)  # Red
 
     # Smooth Color Transition
     blend_color(current_color_1, target_color_1, color_transition_speed)
@@ -795,6 +926,43 @@ while running:
     # Draw Text
     draw_text(screen, "Jarvis Interface", (10, 10), font_large, WHITE)
     draw_text(screen, "System Status: All Systems Online", (10, 60), font_small, tuple(current_color_2))
+
+    # Draw the list of statuses under "System Status"
+    start_y = 90  # Starting position for the list of items
+    line_height = 30  # Space between each list item
+
+    for index, status in enumerate(status_list):
+        draw_text(screen, status, (10, start_y + index * line_height), font_small, WHITE)
+
+
+    # Function to update the status list
+    def update_status(new_status):
+        # Add new status to the list and remove the oldest one if needed
+        status_list.append(new_status)
+        if len(status_list) > 5:  # Keep the list size manageable
+            status_list.pop(0)
+
+    # Fetch current track periodically (e.g., every 3 seconds)
+    if pygame.time.get_ticks() % 3000 < 50:  # Update every 3 seconds
+        song, artist, album_cover_url, progress_ms, duration_ms = fetch_current_track()
+        if song and artist:  # Only update if song and artist are available
+            current_song = song
+            current_artist = artist
+            current_progress = progress_ms
+            song_duration = duration_ms
+
+        # Draw the progress bar for the song timeline
+        # Adjust the progress bar position if needed
+    progress_bar_x = (WIDTH - 700) // 2
+    progress_bar_y = HEIGHT - 30  # Adjust y-position for progress bar
+    draw_progress_bar(screen, progress_bar_x, progress_bar_y, 700, 10, current_progress, song_duration)
+
+    # Draw song information above the progress bar
+    if current_song:
+        song_surface = font_small.render(current_song, True, WHITE)
+        song_text_x = (WIDTH - song_surface.get_width()) // 2
+        song_text_y = progress_bar_y - 30  # Adjust y-position for song name
+        screen.blit(song_surface, (song_text_x, song_text_y))
 
     # Update Display
     pygame.display.flip()
