@@ -8,7 +8,7 @@ import spotipy
 import requests
 import webbrowser
 import subprocess
-#from langchain_ollama import OllamaLLM
+from langchain_ollama import OllamaLLM
 import speech_recognition as sr
 import google.generativeai as genai
 from elevenlabs import play
@@ -74,6 +74,7 @@ chat = model.start_chat(
 # info = pygame.display.Info()
 # WIDTH, HEIGHT = info.current_w, info.current_h
 # screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+
 WIDTH, HEIGHT = 1920, 1080
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("Jarvis Interface")
@@ -458,34 +459,6 @@ def chatbot():
     global wake_word_detected, model_answering, is_generating, current_model
 
     current_model= "Jarvis"
-    # wake_word_detected = True
-    # model_answering = True
-    # is_generating = False
-    # audio = client.generate(text="Здравейте, аз съм Джарвис, езиков модел на Gemini обучен от Google. "
-    #                              "Аз съм тук, за да отговоря на въпросите ви, да помогна със задачи или да водя разговори на всякакви теми. "
-    #                              "Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Brian")
-    # play(audio)
-    # model_answering = False
-    #
-    # wake_word_detected = True
-    # current_model = "Friday"
-    # model_answering = True
-    # is_generating = False
-    # audio = client.generate(text="Здравейте, аз съм Friday, езиков модел на LLama3. "
-    #                              "Тук съм, за да помогна с въпроси и задачи, като използвам последните технологии за машинно обучение. "
-    #                               "Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Matilda")
-    # play(audio)
-    # model_answering = False
-    #
-    # wake_word_detected = True
-    # current_model = "Veronica"
-    # model_answering = True
-    # is_generating = False
-    # audio = client.generate(text="Здравейте, аз съм Вероника, езиков модел на DeepSeek. "
-    #                              "Моето предназначение е да ви предоставям точна информация и да бъда на разположение за всякакви въпроси или задачи, "
-    #                              "с които се нуждаете от помощ. Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Sarah")
-    # play(audio)
-    # model_answering = False
 
     print("Welcome to Jarvis! Say 'Jarvis' to activate. Say 'exit' to quit.")
 
@@ -546,6 +519,40 @@ def chatbot():
             if user_input is None:
                 print("Error: No input detected.")
                 continue
+
+            if "представи се" in user_input or "представиш" in user_input:
+                audio = client.generate(text="Здравейте, аз съм Джарвис, езиков модел на Gemini обучен от Google."
+                                             "Вдъхновен съм от легендарния изкуствен интелект на Тони Старк – Джарвис от Железния човек."
+                                              "Аз съм тук, за да отговоря на въпросите ви, да помогна със задачи или да водя разговори на всякакви теми. "
+                                             "Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Brian")
+                play(audio)
+                model_answering = False
+
+                wake_word_detected = True
+                current_model = "Friday"
+                model_answering = True
+                is_generating = False
+                audio = client.generate(text="Здравейте, аз съм Friday, езиков модел на LLama3. "
+                                             "Тук съм, за да помогна с въпроси и задачи, като използвам последните технологии за машинно обучение. "
+                                              "Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Matilda")
+                play(audio)
+                model_answering = False
+
+                wake_word_detected = True
+                current_model = "Veronica"
+                model_answering = True
+                is_generating = False
+                audio = client.generate(text="Здравейте, аз съм Вероника, езиков модел на DeepSeek. "
+                                             "Моето предназначение е да ви предоставям точна информация и да бъда на разположение за всякакви въпроси или задачи, "
+                                             "с които се нуждаете от помощ. Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Sarah")
+                play(audio)
+                model_answering = False
+
+            if "можеш" in user_input and "правиш " in user_input:
+                audio = client.generate(text="Мога да търся информация в интернет, да я обобщавам и да ви я представям. "
+                                             "Също така, мога да изпращам и чета имейли, да пускам музика, да отварям нови документи в Word и дори да ви опиша това, което виждам.",
+                                        voice="Brian")
+                play(audio)
 
             if "пусни" in user_input and ("песен" in user_input or "музика" in user_input):
                 audio = client.generate(text="Разбира се, имате ли някакви предпочитания за песен?", voice=jarvis_voice)
@@ -816,8 +823,8 @@ def chatbot():
                 wake_word_detected = False
                 continue
 
-            if (("отвори" in user_input or "отвориш" in user_input or "отвориш" in user_input )
-                    and ("word" in user_input or "wor" in user_input or "документ" in user_input)):  # currently not working
+            if (("отвори" in user_input or "отвориш" in user_input or "отвориш" in user_input ) # currently not working
+                    and ("word" in user_input or "wor" in user_input or "документ" in user_input)):
                 audio = client.generate(text="Разбира се, отварям Word. Само секунда", voice=jarvis_voice)
                 play(audio)
 
@@ -907,9 +914,9 @@ def chatbot():
 
                 if (current_model == "Jarvis"): #Jarvis model (Gemini)
                     result = chat.send_message({"parts": [user_input]})
-                # elif (current_model == "Friday"): #Friday model (Llama3)
-                #     model = OllamaLLM(model="llama3")
-                #     result = model.invoke(input=user_input)
+                elif (current_model == "Friday"): #Friday model (Llama3)
+                    model = OllamaLLM(model="llama3")
+                    result = model.invoke(input=user_input)
 
                 # Done generating the answer
                 is_generating = False
@@ -920,10 +927,10 @@ def chatbot():
                     print(f"Jarvis: {result.text}")
                     audio = client.generate(text=result.text, voice=jarvis_voice)
                     play(audio)
-                # elif (current_model == "Friday"): #Friday answering
-                #     print(f"FRIDAY: {result}")
-                #     audio = client.generate(text=result, voice=jarvis_voice)
-                #     play(audio)
+                elif (current_model == "Friday"): #Friday answering
+                    print(f"FRIDAY: {result}")
+                    audio = client.generate(text=result, voice=jarvis_voice)
+                    play(audio)
                 model_answering = False
                 is_generating = False
 
