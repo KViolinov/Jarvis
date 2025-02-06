@@ -13,10 +13,13 @@ from datetime import datetime, timedelta
 import dateparser
 from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+import asyncio
 
 from jarvis_functions.gemini_vision_method import *
 from jarvis_functions.call_phone_method import *
 from jarvis_functions.whatsapp_messaging_method import *
+#from jarvis_functions.ocr_model_method import *
+from jarvis_functions.shazam_method import *
 
 # Initialize Pygame
 pygame.init()
@@ -879,6 +882,57 @@ def chatbot():
 
             if ("съобщение" in user_input or "съобщения" in user_input) and "пратиш" in user_input:
                 whatsapp_send_message()
+
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
+
+            if "разпознаеш" in user_input or "песен" in user_input:
+                audio = client.generate(text="Разбира се, започвам да слушам. Ако разпозная песента ще ви кажа името и автора на песента",
+                                        voice=jarvis_voice)
+                play(audio)
+
+                title, artist = recognize_audio()  # Get the title and artist
+                if title and artist:
+                    audio = client.generate(
+                        text=f"Намерих песента, песента е {title}, а автора е {artist}. Желаете ли да пусна песента в spotify?",
+                        voice=jarvis_voice)
+                    play(audio)
+                    print(f"Song Title: {title}")
+                    print(f"Artist: {artist}")
+
+                    print("Listening for song info...")
+                    answer_info = record_text()
+
+                    if "да" in answer_info:
+                        audio = client.generate(text=f"Пускам, {title} на {artist}",
+                                                voice=jarvis_voice)
+                        play(audio)
+                        track_name = {title}
+                        result = sp.search(q=track_name, limit=1)
+
+                        # Get the song's URI
+                        track_uri = result['tracks']['items'][0]['uri']
+                        print(f"Playing track: {track_name}")
+
+                        # Get the current device
+                        devices = sp.devices()
+                        # Find the LAPTOP_KOSI device by its ID
+                        pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
+                        update_status(f"Played {track_name}")
+
+                        # Start playback on the LAPTOP_KOSI device
+                        sp.start_playback(device_id=pc_device_id, uris=[track_uri])
+                        print("Playback started on LAPTOP_KOSI.")
+
+                    elif "не" in answer_info:
+                        model_answering = False
+                        is_generating = False
+                        wake_word_detected = False
+                        continue
+                else:
+                    print("No song found")
 
                 model_answering = False
                 is_generating = False
