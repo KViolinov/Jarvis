@@ -1,6 +1,8 @@
 import os
 import io
+import re
 import math
+import cv2
 import time
 import pygame
 import random
@@ -8,9 +10,14 @@ import spotipy
 import requests
 import webbrowser
 import subprocess
+import win32timezone
+from googletrans import Translator
+import numpy as np
+from ctypes import cast, POINTER
 from langchain_ollama import OllamaLLM
 import speech_recognition as sr
 import google.generativeai as genai
+from google.cloud import vision
 from elevenlabs import play
 from elevenlabs.client import ElevenLabs
 from spotipy.oauth2 import SpotifyClientCredentials
@@ -18,19 +25,16 @@ from spotipy.oauth2 import SpotifyOAuth
 import win32com.client as win32
 from datetime import datetime, timedelta
 import dateparser
-import cv2
-import time
 from PIL import Image
-import numpy as np
-from ctypes import cast, POINTER
 from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
-import win32timezone
+
+from gemini_vision_method import *
 
 # Initialize Pygame
 pygame.init()
 pygame.mixer.init()
-client = ElevenLabs(api_key="sk_a0b46e0f0fc265d7f2ce18614db1cd13d1ce849b49a02207")
+client = ElevenLabs(api_key="sk_a1f900fbd7f869b73954edc03d983b4fbebcfb597118b137")
 r = sr.Recognizer()
 
 #tv lights
@@ -70,6 +74,9 @@ chat = model.start_chat(
     ]
 )
 
+# Create a Translator object
+translator = Translator()
+
 # Screen Dimensions
 # info = pygame.display.Info()
 # WIDTH, HEIGHT = info.current_w, info.current_h
@@ -90,6 +97,8 @@ GREEN1 = (0, 219, 0)
 GREEN2 = (4, 201, 4)
 PINK1 = (255, 182, 193)  # Light Pink
 PINK2 = (255, 105, 180)  # Hot Pink
+PURPLE1 = (166, 0, 255)
+PURPLE2 = (176, 28, 255)
 font_large = pygame.font.Font(None, 48)
 font_small = pygame.font.Font(None, 32)
 
@@ -150,7 +159,8 @@ status_list = []
 jarvis_voice = "Brian" #deffault voice
 
 # Ball initial random positions
-random_particles = [{"x": random.randint(0, WIDTH), "y": random.randint(0, HEIGHT), "dx": random.uniform(-2, 2), "dy": random.uniform(-2, 2)} for _ in range(num_particles)]
+random_particles = [{"x": random.randint(0, WIDTH), "y": random.randint(0, HEIGHT),
+                     "dx": random.uniform(-2, 2), "dy": random.uniform(-2, 2)} for _ in range(num_particles)]
 
 # State Variables
 model_answering = False
@@ -164,6 +174,18 @@ current_artist = ""
 album_cover = None
 current_progress = 0
 song_duration = 0
+
+def translate_input(user_input, direction="bg_to_en"):
+    if direction == "bg_to_en":
+        # Translate from Bulgarian to English
+        translated_text = translator.translate(user_input, src='bg', dest='en')
+        print(f"Original (BG): {user_input}")
+        print(f"Translated (EN): {translated_text.text}")
+    elif direction == "en_to_bg":
+        # Translate from English to Bulgarian
+        translated_text = translator.translate(user_input, src='en', dest='bg')
+        print(f"Original (EN): {user_input}")
+        print(f"Translated (BG): {translated_text.text}")
 
 def set_volume(level):
     """Sets the system volume (Windows - using pycaw)."""
@@ -319,6 +341,9 @@ def draw_response(model):
     elif model == "Friday":
         target_color_1 = list(PINK1)
         target_color_2 = list(PINK2)
+    elif model == "Veronica":
+        target_color_1 = list(PURPLE1)
+        target_color_2 = list(PURPLE2)
 
     speed = 1
     is_collided = True
@@ -460,14 +485,14 @@ def chatbot():
 
     current_model= "Jarvis"
 
-    print("Welcome to Jarvis! Say 'Jarvis' to activate. Say 'exit' to quit.")
+    print("Welcome to Vision! Say any of the models name to activate. Say 'exit' to quit.")
 
     while True:
         if not wake_word_detected:
             # Listen for the wake word
             print("Waiting for wake word...")
-            user_input = record_text()
-
+            #user_input = record_text()
+            user_input = input()
             if user_input and ("джарвис" in user_input or "джарви" in user_input):
                 wake_word_detected = True
                 current_model = "Jarvis"
@@ -486,23 +511,41 @@ def chatbot():
                 model_answering = False
                 is_generating = True
 
-            # elif user_input and "friday" in user_input:
-            #     wake_word_detected = True
-            #     current_model = "Friday"
-            #     pygame.mixer.music.load("beep.flac")
-            #     pygame.mixer.music.play()
-            #
-            #     print("Wake word detected!")
-            #     model_answering = True
-            #     is_generating = False
-            #
-            #     jarvis_voice = "Matilda"
-            #     response = random.choice(jarvis_responses)
-            #     audio = client.generate(text=response, voice=jarvis_voice)
-            #     play(audio)
-            #
-            #     model_answering = False
-            #     is_generating = True
+            elif user_input and "friday" in user_input:
+                wake_word_detected = True
+                current_model = "Friday"
+                pygame.mixer.music.load("beep.flac")
+                pygame.mixer.music.play()
+
+                print("Wake word detected!")
+                model_answering = True
+                is_generating = False
+
+                jarvis_voice = "Matilda"
+                response = random.choice(jarvis_responses)
+                audio = client.generate(text=response, voice=jarvis_voice)
+                play(audio)
+
+                model_answering = False
+                is_generating = True
+
+            elif user_input and "Вероника" in user_input:
+                wake_word_detected = True
+                current_model = "Veronica"
+                pygame.mixer.music.load("beep.flac")
+                pygame.mixer.music.play()
+
+                print("Wake word detected!")
+                model_answering = True
+                is_generating = False
+
+                jarvis_voice = "Sarah"
+                response = random.choice(jarvis_responses)
+                audio = client.generate(text=response, voice=jarvis_voice)
+                play(audio)
+
+                model_answering = False
+                is_generating = True
 
             elif user_input == "излез":
                 print("Goodbye!")
@@ -514,8 +557,8 @@ def chatbot():
         else:
             # Actively listen for commands
             print("Listening for commands...")
-            user_input = record_text()
-
+            #user_input = record_text()
+            user_input = input()
             if user_input is None:
                 print("Error: No input detected.")
                 continue
@@ -756,68 +799,85 @@ def chatbot():
                 # Направи ми събитие за 3 следобяд днес, което да продължи 1 час, и да се казва "нахрани котката"pip install pywin32
 
             if ("виждаш" in user_input or "вижда" in user_input) and "какво" in user_input: # currently not working
-                # Open the webcam
-                cap = cv2.VideoCapture(0)
+                # # Open the webcam
+                # audio = client.generate(text="Камерата по подразбиране ли да използвам?", voice=jarvis_voice)
+                # play(audio)
+                #
+                # print("Listening for camera info...")
+                # #camera_info = record_text()
+                # camera_info = input()
+                #
+                # if "да" in camera_info:
+                #     cap = cv2.VideoCapture(0)
+                #     audio = client.generate(text="Добре, използвам web камерата на компютъра ви", voice=jarvis_voice)
+                #     play(audio)
+                # elif "не" in camera_info or "другата" in user_input:
+                #     cap = cv2.VideoCapture(2)
+                #     audio = client.generate(text="Добре, използвам камерата от ви ар хедсета",
+                #                             voice=jarvis_voice)
+                #     play(audio)
+                #
+                #
+                # if not cap.isOpened():
+                #     print("Error: Could not open webcam.")
+                #     exit()
+                #
+                # # Create a named window
+                # cv2.namedWindow("Capture Window", cv2.WINDOW_NORMAL)
+                #
+                # # Create a named window and resize it
+                # cv2.namedWindow("Capture Window", cv2.WINDOW_NORMAL)
+                # cv2.resizeWindow("Capture Window", 800, 600)  # Set window size to 800x600
+                #
+                # # Countdown from 3
+                # for i in range(3, 0, -1):
+                #     # Display the countdown on the OpenCV window
+                #     ret, frame = cap.read()
+                #     if not ret:
+                #         print("Error: Failed to capture image.")
+                #         break
+                #
+                #     # Add countdown text (centered)
+                #     cv2.putText(frame, str(i), (350, 300), cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 0, 255), 5)
+                #
+                #     # Show frame
+                #     cv2.imshow("Capture Window", frame)
+                #     cv2.waitKey(1000)  # Wait for 1 second
+                #
+                # # Capture the final image when countdown hits 1
+                # # pygame.mixer.music.load("camera_shutter.wav")
+                # # pygame.mixer.music.play()
+                # ret, frame_bgr = cap.read()
+                # if not ret:
+                #     print("Error: Failed to capture final image.")
+                #     cap.release()
+                #     cv2.destroyAllWindows()
+                #     exit()
+                #
+                # # Convert BGR to RGB for Gemini
+                # frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+                #
+                # # Convert to PIL Image
+                # captured_image = Image.fromarray(frame_rgb)
+                #
+                # # Close the OpenCV window
+                # cap.release()
+                # cv2.destroyAllWindows()
+                #
+                # # Provide a prompt
+                # prompt = "Опиши какво виждаш на снимката."
+                #
+                # # Send the image to the Gemini Vision model
+                # response = model.generate_content([prompt, captured_image])
+                #
+                # # Print the AI's response
+                # print("\nAI Response:")
+                # print(response.text)
+                #
+                # audio = client.generate(text=response.text, voice=jarvis_voice)
+                # play(audio)
 
-                if not cap.isOpened():
-                    print("Error: Could not open webcam.")
-                    exit()
-
-                # Create a named window
-                cv2.namedWindow("Capture Window", cv2.WINDOW_NORMAL)
-
-                # Create a named window and resize it
-                cv2.namedWindow("Capture Window", cv2.WINDOW_NORMAL)
-                cv2.resizeWindow("Capture Window", 800, 600)  # Set window size to 800x600
-
-                # Countdown from 3
-                for i in range(3, 0, -1):
-                    # Display the countdown on the OpenCV window
-                    ret, frame = cap.read()
-                    if not ret:
-                        print("Error: Failed to capture image.")
-                        break
-
-                    # Add countdown text (centered)
-                    cv2.putText(frame, str(i), (350, 300), cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 0, 255), 5)
-
-                    # Show frame
-                    cv2.imshow("Capture Window", frame)
-                    cv2.waitKey(1000)  # Wait for 1 second
-
-                # Capture the final image when countdown hits 1
-                pygame.mixer.music.load("sound_files\camera_shutter.wav")
-                pygame.mixer.music.play()
-                ret, frame_bgr = cap.read()
-                if not ret:
-                    print("Error: Failed to capture final image.")
-                    cap.release()
-                    cv2.destroyAllWindows()
-                    exit()
-
-                # Convert BGR to RGB for Gemini
-                frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-
-                # Convert to PIL Image
-                captured_image = Image.fromarray(frame_rgb)
-
-                # Close the OpenCV window
-                cap.release()
-                cv2.destroyAllWindows()
-
-                # Provide a prompt
-                prompt = "Опиши какво виждаш на снимката."
-
-                # Send the image to the Gemini Vision model
-                response = model.generate_content([prompt, captured_image])
-
-                # Print the AI's response
-                print("\nAI Response:")
-                print(response.text)
-
-                audio = client.generate(text=response.text, voice=jarvis_voice)
-                play(audio)
-
+                gemini_vision()
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
@@ -914,9 +974,34 @@ def chatbot():
 
                 if (current_model == "Jarvis"): #Jarvis model (Gemini)
                     result = chat.send_message({"parts": [user_input]})
-                elif (current_model == "Friday"): #Friday model (Llama3)
+
+                elif (current_model == "Friday"):  # Friday model (Llama3)
                     model = OllamaLLM(model="llama3")
-                    result = model.invoke(input=user_input)
+
+                    # Capture the translated text
+
+                    translated_input = translate_input(user_input, direction="bg_to_en")
+
+                    # Pass the translated input to the model
+
+                    result = model.invoke(input=translated_input)
+
+                elif (current_model == "Veronica"): #Friday model (Llama3)
+                    model = OllamaLLM(model="deepseek-r1:1.5b")
+
+                    # Translate the user input from Bulgarian to English
+                    translated_input = translate_input(user_input, direction="bg_to_en")
+
+                    # Build the full input for the model with the translated text
+                    full_input = f"{system_instruction}\n\nUser: {translated_input}\nAssistant:"
+
+                    # Get the model result
+                    result1 = model.invoke(input=full_input)
+
+                    # Remove the <think> part
+                    result = re.sub(r"<think>.*?</think>", "", result1, flags=re.DOTALL)
+
+                    print(result)  # For testing
 
                 # Done generating the answer
                 is_generating = False
@@ -927,10 +1012,30 @@ def chatbot():
                     print(f"Jarvis: {result.text}")
                     audio = client.generate(text=result.text, voice=jarvis_voice)
                     play(audio)
-                elif (current_model == "Friday"): #Friday answering
+
+                elif (current_model == "Friday"):  # Friday answering
                     print(f"FRIDAY: {result}")
-                    audio = client.generate(text=result, voice=jarvis_voice)
+
+                    # Translate the result from English to Bulgarian
+                    translated_result = translate_input(result, direction="en_to_bg")
+
+                    # Generate audio from the translated text
+                    audio = client.generate(text=translated_result, voice=jarvis_voice)
+
+                    # Play the generated audio
                     play(audio)
+
+                elif (current_model == "Veronica"):  # Friday answering
+                    print(f"Veronica: {result}")
+                    # Translate the result from English to Bulgarian
+                    translated_result = translate_input(result, direction="en_to_bg")
+
+                    # Generate audio from the translated text
+                    audio = client.generate(text=translated_result, voice=jarvis_voice)
+
+                    # Play the generated audio
+                    play(audio)
+
                 model_answering = False
                 is_generating = False
 
@@ -1018,3 +1123,4 @@ while running:
 
 # Quit Pygame
 pygame.quit()
+
