@@ -491,8 +491,8 @@ def chatbot():
         if not wake_word_detected:
             # Listen for the wake word
             print("Waiting for wake word...")
-            #user_input = record_text()
-            user_input = input()
+            user_input = record_text()
+
             if user_input and ("джарвис" in user_input or "джарви" in user_input):
                 wake_word_detected = True
                 current_model = "Jarvis"
@@ -557,8 +557,7 @@ def chatbot():
         else:
             # Actively listen for commands
             print("Listening for commands...")
-            #user_input = record_text()
-            user_input = input()
+            user_input = record_text()
             if user_input is None:
                 print("Error: No input detected.")
                 continue
