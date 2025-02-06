@@ -1,35 +1,22 @@
-import os
 import io
 import re
 import math
-import cv2
-import time
 import pygame
 import random
 import spotipy
 import requests
-import webbrowser
 import subprocess
-import win32timezone
 from googletrans import Translator
-import numpy as np
-from ctypes import cast, POINTER
 from langchain_ollama import OllamaLLM
-import speech_recognition as sr
-import google.generativeai as genai
-from google.cloud import vision
-from elevenlabs import play
-from elevenlabs.client import ElevenLabs
-from spotipy.oauth2 import SpotifyClientCredentials
-from spotipy.oauth2 import SpotifyOAuth
 import win32com.client as win32
 from datetime import datetime, timedelta
 import dateparser
-from PIL import Image
 from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
 
-from gemini_vision_method import *
+from jarvis_functions.gemini_vision_method import *
+from jarvis_functions.call_phone_method import *
+from jarvis_functions.whatsapp_messaging_method import *
 
 # Initialize Pygame
 pygame.init()
@@ -493,7 +480,7 @@ def chatbot():
             print("Waiting for wake word...")
             user_input = record_text()
 
-            if user_input and ("джарвис" in user_input or "джарви" in user_input):
+            if user_input and ("джарвис" in user_input or "джарви" in user_input or "джервис" in user_input):
                 wake_word_detected = True
                 current_model = "Jarvis"
                 pygame.mixer.music.load("sound_files/beep.flac")
@@ -514,7 +501,7 @@ def chatbot():
             elif user_input and "friday" in user_input:
                 wake_word_detected = True
                 current_model = "Friday"
-                pygame.mixer.music.load("beep.flac")
+                pygame.mixer.music.load("sound_files/beep.flac")
                 pygame.mixer.music.play()
 
                 print("Wake word detected!")
@@ -532,7 +519,7 @@ def chatbot():
             elif user_input and "Вероника" in user_input:
                 wake_word_detected = True
                 current_model = "Veronica"
-                pygame.mixer.music.load("beep.flac")
+                pygame.mixer.music.load("sound_files/beep.flac")
                 pygame.mixer.music.play()
 
                 print("Wake word detected!")
@@ -877,6 +864,22 @@ def chatbot():
                 # play(audio)
 
                 gemini_vision()
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
+
+            if "звъннеш" in user_input:
+                call_phone()
+
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
+
+            if ("съобщение" in user_input or "съобщения" in user_input) and "пратиш" in user_input:
+                whatsapp_send_message()
+
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
