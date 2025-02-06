@@ -59,8 +59,8 @@ def gemini_vision():
     play(audio)
 
     print("Listening for camera info...")
-    #camera_info = record_text()
-    camera_info = input()
+    camera_info = record_text()
+
     if "да" in camera_info:
         cap = cv2.VideoCapture(0)
         audio = client.generate(text="Добре, използвам web камерата на компютъра ви", voice="Brian")
