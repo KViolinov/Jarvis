@@ -15,6 +15,10 @@ from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities
 from pycaw.pycaw import IAudioEndpointVolume
 import asyncio
+from docx import Document
+import pyautogui
+import platform
+import pygetwindow as gw
 
 from jarvis_functions.gemini_vision_method import *
 from jarvis_functions.call_phone_method import *
@@ -25,7 +29,7 @@ from jarvis_functions.shazam_method import *
 # Initialize Pygame
 pygame.init()
 pygame.mixer.init()
-client = ElevenLabs(api_key="sk_a1f900fbd7f869b73954edc03d983b4fbebcfb597118b137")
+client = ElevenLabs(api_key="sk_f28b52e98fafb36b76ab5861e66b1524f64ef00385d12b06")
 r = sr.Recognizer()
 
 #tv lights
@@ -64,9 +68,6 @@ chat = model.start_chat(
         }
     ]
 )
-
-# Create a Translator object
-translator = Translator()
 
 # Screen Dimensions
 # info = pygame.display.Info()
@@ -128,8 +129,7 @@ jarvis_responses = [
     "Слушам, как мога да Ви асистирам?",
     "Как мога да Ви помогна днес?",
     "Как мога да Ви помогна?",
-    "Да",
-    "Слушам"
+    "Слушам шефе, как да помогна?"
 ]
 
 selected_songs = [
@@ -166,17 +166,14 @@ album_cover = None
 current_progress = 0
 song_duration = 0
 
-def translate_input(user_input, direction="bg_to_en"):
+async def translate_input(user_input, direction="bg_to_en"):
+    translator = Translator()
     if direction == "bg_to_en":
-        # Translate from Bulgarian to English
-        translated_text = translator.translate(user_input, src='bg', dest='en')
-        print(f"Original (BG): {user_input}")
-        print(f"Translated (EN): {translated_text.text}")
+        translated_text = await translator.translate(user_input, src='bg', dest='en')  # Await the translation
+        return translated_text.text
     elif direction == "en_to_bg":
-        # Translate from English to Bulgarian
-        translated_text = translator.translate(user_input, src='en', dest='bg')
-        print(f"Original (EN): {user_input}")
-        print(f"Translated (BG): {translated_text.text}")
+        translated_text = await translator.translate(user_input, src='en', dest='bg')  # Await the translation
+        return translated_text.text
 
 def get_current_volume():
     # Get the default audio device
@@ -571,8 +568,14 @@ def chatbot():
                 play(audio)
 
             if ("пусни" in user_input or "пуснеш" in user_input) and ("песен" in user_input or "музика" in user_input):
+                model_answering = True
+                is_generating = False
+
                 audio = client.generate(text="Разбира се, имате ли някакви предпочитания за песен?", voice=jarvis_voice)
                 play(audio)
+
+                model_answering = False
+                is_generating = True
 
                 print("Listening for song info...")
                 user_input = record_text()
@@ -583,6 +586,9 @@ def chatbot():
                     user_input = record_text()
 
                 if "да" in user_input:
+                    model_answering = True
+                    is_generating = False
+
                     audio = client.generate(text="Добре, коя песен бихте желали да ви пусна?",
                                             voice=jarvis_voice)
                     play(audio)
@@ -593,6 +599,7 @@ def chatbot():
                     audio = client.generate(text=f"Пускам, {user_input}",
                                             voice=jarvis_voice)
                     play(audio)
+
                     track_name = user_input
                     result = sp.search(q=track_name, limit=1)
 
@@ -611,6 +618,9 @@ def chatbot():
                     print("Playback started on LAPTOP_KOSI.")
 
                 elif "не" in user_input:
+                    model_answering = True
+                    is_generating = False
+
                     audio = client.generate(text="Пускам тогава от избрания от вас списък с песни?",
                                             voice=jarvis_voice)
                     play(audio)
@@ -645,6 +655,9 @@ def chatbot():
                 continue
 
             if "пратиш" in user_input and ("имейл" in user_input or "писмо" in user_input):
+                model_answering = True
+                is_generating = False
+
                 audio = client.generate(text="Разбира се, към кого бихте желали да пратите имейла?", voice=jarvis_voice)
                 play(audio)
 
@@ -971,55 +984,74 @@ def chatbot():
 
             if (("отвори" in user_input or "отвориш" in user_input or "отвориш" in user_input ) # currently not working
                     and ("word" in user_input or "wor" in user_input or "документ" in user_input)):
+                # Initialize document
+                doc = Document()
+
+                # Open Word
                 audio = client.generate(text="Разбира се, отварям Word. Само секунда", voice=jarvis_voice)
                 play(audio)
 
-                word = win32.gencache.EnsureDispatch('Word.Application')
-                word.Visible = True  # Optional: Make Word visible
+                # Wait a bit to ensure Word has opened
+                time.sleep(2)
 
-                # Check if any documents are open. If not, create one.
-                if word.Documents.Count == 0:
-                    word.Documents.Add()  # Add a new document
-
-                # *Crucial*: Wait a short time for Word to fully initialize and the document to open.
-                time.sleep(2)  # Wait for 2 seconds (adjust as needed)
-
-                selection = word.Selection
-
-                audio = client.generate(text="Готов съм. Слушам и записвам. Кажете думата Край за да спра да записвам",
-                                        voice=jarvis_voice)
+                # Ask for document title
+                audio = client.generate(
+                    text="Готов съм. Преди да започнем, как ще желаете да е заглавието на документа?",
+                    voice=jarvis_voice)
                 play(audio)
+
+                # Listen for the title input
+                print("Listening for title...")
+                input_text = record_text()
+
+                # Add a title
+                doc.add_heading(input_text, 0)
+
+                # Inform the user
+                audio = client.generate(
+                    text="Добре започвам да слушам и записвам. Кажете думата Край за да спра да записвам",
+                    voice=jarvis_voice)
+                play(audio)
+
+                words_in_document = ""
 
                 while True:
                     with sr.Microphone() as source:
                         try:
-                            print("Listening for...")
+                            print("Listening for input...")
                             input_text = record_text()
                             print(f"You said: {input_text}")
 
-                            # Stop listening when "end" is said
-                            if input_text.lower() == "край":
-                                audio = client.generate(
-                                    text="Спрях да записвам, файла е запазен в папка Downloads",
-                                    voice=jarvis_voice)
+                            # Skip if input_text is None (empty or unrecognized speech)
+                            if input_text is None or input_text.strip() == "":
+                                print("No speech detected or input is empty, try again.")
+                                continue  # Skip to the next loop iteration
+
+                            # Stop listening when "край" is said
+                            if "край" in input_text or "Край" in input_text:
+                                audio = client.generate(text="Спрях да записвам, файла е запазен в папка Downloads",
+                                                        voice=jarvis_voice)
                                 play(audio)
+                                # Add a paragraph
+                                doc.add_paragraph(words_in_document)
                                 break
 
-                            selection.TypeText(input_text + ". ")
+                            # Append the valid input to the document
+                            words_in_document += input_text + ". "
 
-                            time.sleep(1)  # Малко забавяне за реализъм
+                            time.sleep(1)  # Slight delay for realism
 
                         except sr.UnknownValueError:
                             print("Could not understand, try again.")
                         except sr.RequestError:
                             print("Speech recognition service error.")
 
-                # # Запазване на документа
-                # doc.SaveAs(r"D:\downloads\proba1.docx")
-                #
-                # # Close Word
-                # doc.Close()
-                # word.Quit()
+                # Finished
+                print("Document saved and process ended.")
+
+                file_path = r'D:\example.docx'
+                doc.save(file_path)
+                os.system(f'start {file_path}')  # Open Word on Windows
 
                 model_answering = False
                 is_generating = False
@@ -1084,13 +1116,9 @@ def chatbot():
                 elif (current_model == "Friday"):  # Friday model (Llama3)
                     model = OllamaLLM(model="llama3")
 
-                    # Capture the translated text
-
-                    translated_input = translate_input(user_input, direction="bg_to_en")
-
-                    # Pass the translated input to the model
-
-                    result = model.invoke(input=translated_input)
+                    translated_input_bg_to_en = asyncio.run(translate_input(user_input, "bg_to_en"))  # Run the async function
+                    print(translated_input_bg_to_en)
+                    result = model.invoke(input=translated_input_bg_to_en)
 
                 elif (current_model == "Veronica"): #Friday model (Llama3)
                     model = OllamaLLM(model="deepseek-r1:1.5b")
@@ -1122,11 +1150,11 @@ def chatbot():
                 elif (current_model == "Friday"):  # Friday answering
                     print(f"FRIDAY: {result}")
 
-                    # Translate the result from English to Bulgarian
-                    translated_result = translate_input(result, direction="en_to_bg")
+                    translated_input_en_to_bg = asyncio.run(translate_input(user_input, "en_to_bg"))  # Run the async function
+                    print(result)
 
                     # Generate audio from the translated text
-                    audio = client.generate(text=translated_result, voice=jarvis_voice)
+                    audio = client.generate(text=translated_input_en_to_bg, voice=jarvis_voice)
 
                     # Play the generated audio
                     play(audio)
@@ -1183,7 +1211,7 @@ while running:
     draw_particles(screen, random_particles, target_mode=is_collided)
 
     # Draw Text
-    draw_text(screen, "Jarvis Interface", (10, 10), font_large, WHITE)
+    draw_text(screen, "Vision Interface", (10, 10), font_large, WHITE)
     draw_text(screen, "System Status: All Systems Online", (10, 60), font_small, tuple(current_color_2))
 
     # Draw the list of statuses under "System Status"
@@ -1192,7 +1220,6 @@ while running:
 
     for index, status in enumerate(status_list):
         draw_text(screen, status, (10, start_y + index * line_height), font_small, WHITE)
-
 
     # Function to update the status list
     def update_status(new_status):
@@ -1229,4 +1256,3 @@ while running:
 
 # Quit Pygame
 pygame.quit()
-
