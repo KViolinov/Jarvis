@@ -8,8 +8,9 @@ import speech_recognition as sr
 from elevenlabs import play
 from elevenlabs.client import ElevenLabs
 import subprocess
+from api_keys import ELEVEN_LABS_API, GEMINI_KEY
 
-client = ElevenLabs(api_key="sk_a1f900fbd7f869b73954edc03d983b4fbebcfb597118b137")
+client = ElevenLabs(api_key=ELEVEN_LABS_API)
 r = sr.Recognizer()
 
 def record_text():
