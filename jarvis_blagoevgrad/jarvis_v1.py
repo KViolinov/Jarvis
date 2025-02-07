@@ -18,7 +18,7 @@ import asyncio
 from jarvis_functions.gemini_vision_method import *
 from jarvis_functions.call_phone_method import *
 from jarvis_functions.whatsapp_messaging_method import *
-#from jarvis_functions.ocr_model_method import *
+from jarvis_functions.ocr_model_method import *
 from jarvis_functions.shazam_method import *
 
 # Initialize Pygame
@@ -872,6 +872,45 @@ def chatbot():
                 wake_word_detected = False
                 continue
 
+            if ("пише" in user_input or "пиша" in user_input) and "какво" in user_input:
+                # Open the webcam
+                audio = client.generate(text="Камерата по подразбиране ли да използвам?", voice=jarvis_voice)
+                play(audio)
+
+                print("Listening for camera info...")
+                camera_info = record_text()
+
+                camera_index = 0 #deffault index
+
+                if "да" in camera_info:
+                    camera_index = 0
+                    audio = client.generate(text="Добре, използвам web камерата на компютъра ви", voice=jarvis_voice)
+                    play(audio)
+                elif "не" in camera_info or "другата" in user_input:
+                    camera_index = 1
+                    audio = client.generate(text="Добре, използвам камерата от ви ар хедсета",
+                                            voice=jarvis_voice)
+                    play(audio)
+
+                extracted_text_from_ocr = capture_and_ocr(camera_index = camera_index)
+
+                if len(extracted_text_from_ocr) > 0:
+                    print("Here is what the OCR model detected:")
+                    print(extracted_text_from_ocr)
+                    audio = client.generate(text=fr"OCR модела разпозна следното {extracted_text_from_ocr}",
+                                            voice=jarvis_voice)
+                    play(audio)
+                else:
+                    print("Nothing was detected by the OCR model")
+                    audio = client.generate(text="OCR модела не можа да разпознае нищо от снимката",
+                                            voice=jarvis_voice)
+                    play(audio)
+
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
+
             if "звъннеш" in user_input:
                 call_phone()
 
@@ -888,7 +927,7 @@ def chatbot():
                 wake_word_detected = False
                 continue
 
-            if "разпознаеш" in user_input or "песен" in user_input:
+            if ("разпознаеш" in user_input or "коя" in user_input) and "песен" in user_input:
                 audio = client.generate(text="Разбира се, започвам да слушам. Ако разпозная песента ще ви кажа името и автора на песента",
                                         voice=jarvis_voice)
                 play(audio)
