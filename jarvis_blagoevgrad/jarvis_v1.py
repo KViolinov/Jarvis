@@ -25,19 +25,20 @@ from jarvis_functions.call_phone_method import *
 from jarvis_functions.whatsapp_messaging_method import *
 from jarvis_functions.ocr_model_method import *
 from jarvis_functions.shazam_method import *
+from api_keys import ELEVEN_LABS_API, GEMINI_KEY, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
 
 # Initialize Pygame
 pygame.init()
 pygame.mixer.init()
-client = ElevenLabs(api_key="sk_f28b52e98fafb36b76ab5861e66b1524f64ef00385d12b06")
+client = ElevenLabs(api_key=ELEVEN_LABS_API)
 r = sr.Recognizer()
 
 #tv lights
 WLED_IP = "192.168.10.211"
 
 # Seting up spotify
-client_id = 'dacc19ea9cc44decbdcb2959cd6eb74a'
-client_secret = '11e970f059dc4265a8fe64aaa80a82bf'
+client_id = SPOTIFY_CLIENT_ID
+client_secret = SPOTIFY_CLIENT_SECRET
 sp = spotipy.Spotify(auth_manager=spotipy.SpotifyOAuth(
     client_id=client_id,
     client_secret=client_secret,
@@ -47,7 +48,7 @@ sp = spotipy.Spotify(auth_manager=spotipy.SpotifyOAuth(
 jazz_playlist_url = "spotify:playlist/60joMYdXRjtwwfyERiGu4c?si=42cc553fb755446d"
 
 # Setting up Gemini
-os.environ["GEMINI_API_KEY"] = "AIzaSyBzMQutGJnduWwKcTrmvAvP_QiTj8zaJ3I"
+os.environ["GEMINI_API_KEY"] = GEMINI_KEY
 
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
@@ -792,84 +793,6 @@ def chatbot():
                 # Направи ми събитие за 3 следобяд днес, което да продължи 1 час, и да се казва "нахрани котката"pip install pywin32
 
             if ("виждаш" in user_input or "вижда" in user_input) and "какво" in user_input: # currently not working
-                # # Open the webcam
-                # audio = client.generate(text="Камерата по подразбиране ли да използвам?", voice=jarvis_voice)
-                # play(audio)
-                #
-                # print("Listening for camera info...")
-                # #camera_info = record_text()
-                # camera_info = input()
-                #
-                # if "да" in camera_info:
-                #     cap = cv2.VideoCapture(0)
-                #     audio = client.generate(text="Добре, използвам web камерата на компютъра ви", voice=jarvis_voice)
-                #     play(audio)
-                # elif "не" in camera_info or "другата" in user_input:
-                #     cap = cv2.VideoCapture(2)
-                #     audio = client.generate(text="Добре, използвам камерата от ви ар хедсета",
-                #                             voice=jarvis_voice)
-                #     play(audio)
-                #
-                #
-                # if not cap.isOpened():
-                #     print("Error: Could not open webcam.")
-                #     exit()
-                #
-                # # Create a named window
-                # cv2.namedWindow("Capture Window", cv2.WINDOW_NORMAL)
-                #
-                # # Create a named window and resize it
-                # cv2.namedWindow("Capture Window", cv2.WINDOW_NORMAL)
-                # cv2.resizeWindow("Capture Window", 800, 600)  # Set window size to 800x600
-                #
-                # # Countdown from 3
-                # for i in range(3, 0, -1):
-                #     # Display the countdown on the OpenCV window
-                #     ret, frame = cap.read()
-                #     if not ret:
-                #         print("Error: Failed to capture image.")
-                #         break
-                #
-                #     # Add countdown text (centered)
-                #     cv2.putText(frame, str(i), (350, 300), cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 0, 255), 5)
-                #
-                #     # Show frame
-                #     cv2.imshow("Capture Window", frame)
-                #     cv2.waitKey(1000)  # Wait for 1 second
-                #
-                # # Capture the final image when countdown hits 1
-                # # pygame.mixer.music.load("camera_shutter.wav")
-                # # pygame.mixer.music.play()
-                # ret, frame_bgr = cap.read()
-                # if not ret:
-                #     print("Error: Failed to capture final image.")
-                #     cap.release()
-                #     cv2.destroyAllWindows()
-                #     exit()
-                #
-                # # Convert BGR to RGB for Gemini
-                # frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-                #
-                # # Convert to PIL Image
-                # captured_image = Image.fromarray(frame_rgb)
-                #
-                # # Close the OpenCV window
-                # cap.release()
-                # cv2.destroyAllWindows()
-                #
-                # # Provide a prompt
-                # prompt = "Опиши какво виждаш на снимката."
-                #
-                # # Send the image to the Gemini Vision model
-                # response = model.generate_content([prompt, captured_image])
-                #
-                # # Print the AI's response
-                # print("\nAI Response:")
-                # print(response.text)
-                #
-                # audio = client.generate(text=response.text, voice=jarvis_voice)
-                # play(audio)
-
                 gemini_vision()
                 model_answering = False
                 is_generating = False
@@ -1256,3 +1179,4 @@ while running:
 
 # Quit Pygame
 pygame.quit()
+
