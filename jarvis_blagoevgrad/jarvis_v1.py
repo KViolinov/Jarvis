@@ -12,7 +12,8 @@ import win32com.client as win32
 from datetime import datetime, timedelta
 import dateparser
 from comtypes import CLSCTX_ALL
-from pycaw.pycaw import AudioUtilities, IAudioEndpointVolume
+from pycaw.pycaw import AudioUtilities
+from pycaw.pycaw import IAudioEndpointVolume
 import asyncio
 
 from jarvis_functions.gemini_vision_method import *
@@ -177,56 +178,33 @@ def translate_input(user_input, direction="bg_to_en"):
         print(f"Original (EN): {user_input}")
         print(f"Translated (BG): {translated_text.text}")
 
-def set_volume(level):
-    """Sets the system volume (Windows - using pycaw)."""
-    try:
-        devices = AudioUtilities.GetAudioEndpoints(CLSCTX_ALL, IAudioEndpointVolume)
-        for device in devices:
-            if device.IsDefaultAudioEndpoint(0):
-                volume = device.Activate(IAudioEndpointVolume)
-                level = max(0, min(100, level))
-                volume.SetMasterVolumeLevelScalar(level / 100, None)
-                print(f"Volume set to {level}%")
-                return
-        print("No default audio endpoint found") # Print if no default audio endpoint is found
-    except Exception as e:
-        print(f"Error setting volume: {e}")
+def get_current_volume():
+    # Get the default audio device
+    devices = AudioUtilities.GetSpeakers()
+    interface = devices.Activate(
+        IAudioEndpointVolume._iid_, 0, None)
+    volume = interface.QueryInterface(IAudioEndpointVolume)
 
-def get_volume():
-    """Gets the current system volume (Windows - using pycaw)."""
-    try:
-        devices = AudioUtilities.GetAudioEndpoints(CLSCTX_ALL, IAudioEndpointVolume)
-        for device in devices:
-            if device.IsDefaultAudioEndpoint(0):  # 0 for audio render role
-                volume = device.Activate(IAudioEndpointVolume)
-                current_volume = volume.GetMasterVolumeLevelScalar() * 100  # Convert to percentage
-                return int(current_volume)  # Return as an integer
-        return None  # Return None if no default audio endpoint is found
-    except Exception as e:
-        print(f"Error getting volume: {e}")
-        return None
+    # Get the current volume level (0.0 to 1.0)
+    current_volume = volume.GetMasterVolumeLevelScalar()
+    return current_volume * 100  # Return as percentage
 
-def mute():
-    set_volume(0)  # Mute by setting volume to 0
+def set_volume(percentage):
+    # Convert percentage to a value between 0.0 and 1.0
+    if 0 <= percentage <= 100:
+        volume = AudioUtilities.GetSpeakers().Activate(
+            IAudioEndpointVolume._iid_, 0, None).QueryInterface(IAudioEndpointVolume)
+        volume.SetMasterVolumeLevelScalar(percentage / 100.0, None)
+        print(f"Volume set to {percentage}%")
+    else:
+        print("Please provide a valid volume percentage between 0 and 100.")
 
-def unmute():
-    """Unmutes the system volume (sets it to a non-zero value)."""
-    set_volume(50)  # Or any other non-zero value you prefer (e.g., 25, 75)
-    print("System unmuted.")
-
-def increase_volume(increment):
-    current_volume = get_volume()
-    if current_volume is None:
-        print("Could not retrieve current volume, cannot increase")
-        return
-    set_volume(min(100, current_volume + increment))
-
-def decrease_volume(decrement):
-    current_volume = get_volume()
-    if current_volume is None:
-        print("Could not retrieve current volume, cannot decrease")
-        return
-    set_volume(max(0, current_volume - decrement))
+def mute(unmute=False):
+    # Mute or unmute the audio
+    volume = AudioUtilities.GetSpeakers().Activate(
+        IAudioEndpointVolume._iid_, 0, None).QueryInterface(IAudioEndpointVolume)
+    volume.SetMute(unmute, None)
+    print("Audio is muted." if unmute else "Audio is unmuted.")
 
 def send_email(subject, body, to_email):
     outlook = win32.Dispatch('outlook.application')
@@ -414,6 +392,12 @@ def load_album_cover(url):
         print(f"Error loading album cover: {e}")
     return None
 
+def play_music():
+    sp.start_playback()  # Start playback (Play the song)
+
+def pause_music():
+    sp.pause_playback()  # Pause the playback (Stop the song)
+
 def draw_progress_bar(surface, x, y, width, height, progress, max_progress):
     """Draw a progress bar to represent the song timeline."""
     # Check if max_progress is non-zero to avoid division by zero
@@ -586,7 +570,7 @@ def chatbot():
                                         voice="Brian")
                 play(audio)
 
-            if "пусни" in user_input and ("песен" in user_input or "музика" in user_input):
+            if ("пусни" in user_input or "пуснеш" in user_input) and ("песен" in user_input or "музика" in user_input):
                 audio = client.generate(text="Разбира се, имате ли някакви предпочитания за песен?", voice=jarvis_voice)
                 play(audio)
 
@@ -648,6 +632,13 @@ def chatbot():
                     sp.start_playback(device_id=pc_device_id, uris=[track_uri])
                     print("Playback started on LAPTOP_KOSI.")
 
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
+
+            if "спри" in user_input and ("песента" in user_input or "музиката" in user_input):
+                pause_music()
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
@@ -1036,28 +1027,48 @@ def chatbot():
                 continue
 
             if "намали" in user_input and "звука" in user_input:
-                decrease_volume(10)
+                current_volume = get_current_volume()
+                print(f"Current volume: {current_volume}%")
+
+                # Set volume to 50%
+                set_volume(75)
+
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
                 continue
 
             if "усили" in user_input and "звука" in user_input:
-                increase_volume(10)
+                current_volume = get_current_volume()
+                print(f"Current volume: {current_volume}%")
+
+                # Set volume to 50%
+                set_volume(75)
+
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
                 continue
 
             if "заглуши" in user_input and "звука" in user_input:
-                mute()
+                current_volume = get_current_volume()
+                print(f"Current volume: {current_volume}%")
+
+                # Mute the audio
+                mute(unmute=True)
+
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
                 continue
 
             if "отглуши" in user_input and "звука" in user_input:
-                unmute()
+                current_volume = get_current_volume()
+                print(f"Current volume: {current_volume}%")
+
+                # Mute the audio
+                mute(unmute=False)
+
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
