@@ -6,8 +6,10 @@ import os
 import speech_recognition as sr
 from elevenlabs import play
 from elevenlabs.client import ElevenLabs
+import time
+from api_keys import ELEVEN_LABS_API, GEMINI_KEY
 
-client = ElevenLabs(api_key="sk_a1f900fbd7f869b73954edc03d983b4fbebcfb597118b137")
+client = ElevenLabs(api_key=ELEVEN_LABS_API)
 r = sr.Recognizer()
 
 def record_text():
@@ -30,7 +32,7 @@ def record_text():
         print("Sorry, I didn't catch that. Please try again.")
         return None
 
-os.environ["GEMINI_API_KEY"] = "AIzaSyBzMQutGJnduWwKcTrmvAvP_QiTj8zaJ3I"
+os.environ["GEMINI_API_KEY"] = GEMINI_KEY
 
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
@@ -82,20 +84,41 @@ def gemini_vision():
     cv2.namedWindow("Capture Window", cv2.WINDOW_NORMAL)
     cv2.resizeWindow("Capture Window", 800, 600)  # Set window size to 800x600
 
-    # Countdown from 3
     for i in range(3, 0, -1):
-        # Display the countdown on the OpenCV window
-        ret, frame = cap.read()
-        if not ret:
-            print("Error: Failed to capture image.")
-            break
+        start_time = time.time()  # Start time for each second
 
-        # Add countdown text (centered)
-        cv2.putText(frame, str(i), (350, 300), cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 0, 255), 5)
+        while time.time() - start_time < 1:  # Loop for one second
+            ret, frame = cap.read()
+            if not ret:
+                print("Error: Failed to capture image.")
+                break
 
-        # Show frame
-        cv2.imshow("Capture Window", frame)
-        cv2.waitKey(1000)  # Wait for 1 second
+            height, width, _ = frame.shape
+
+            # Calculate the position of the scan line (y-coordinate)
+            # Cycle between top and bottom within the second
+            progress = (time.time() - start_time)  # Progress within the second (0 to 1)
+
+            if i % 2 == 1:  # Odd numbers scan top to bottom
+                line_position = int(progress * height)
+            else:  # Even numbers scan bottom to top
+                line_position = int(height - (progress * height))
+
+            # Draw the moving line on the frame
+            cv2.line(frame, (0, line_position), (width, line_position), (0, 255, 0), 5)
+
+            # Add countdown text (centered)
+            cv2.putText(frame, str(i), (350, 300), cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 0, 255), 5)
+
+            # Show the frame
+            cv2.imshow("Capture Window", frame)
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):  # Added a way to quit
+                break
+
+        else:  # Continue if no breaks in the while loop
+            continue  # Only then decrement i
+        break  # Break if the inner loop was broken
 
     # Capture the final image when countdown hits 1
     # pygame.mixer.music.load("camera_shutter.wav")
