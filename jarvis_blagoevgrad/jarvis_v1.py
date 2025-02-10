@@ -1,31 +1,25 @@
 import io
-import re
 import math
 import pygame
 import random
 import spotipy
 import requests
-import subprocess
 from googletrans import Translator
-from langchain_ollama import OllamaLLM
+#from langchain_ollama import OllamaLLM
 import win32com.client as win32
 from datetime import datetime, timedelta
 import dateparser
-from comtypes import CLSCTX_ALL
 from pycaw.pycaw import AudioUtilities
 from pycaw.pycaw import IAudioEndpointVolume
-import asyncio
 from docx import Document
-import pyautogui
-import platform
-import pygetwindow as gw
+import subprocess
 
 from jarvis_functions.gemini_vision_method import *
 from jarvis_functions.call_phone_method import *
 from jarvis_functions.whatsapp_messaging_method import *
 from jarvis_functions.ocr_model_method import *
 from jarvis_functions.shazam_method import *
-from api_keys import ELEVEN_LABS_API, GEMINI_KEY, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
+from api_keys.api_keys import ELEVEN_LABS_API, GEMINI_KEY, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
 
 # Initialize Pygame
 pygame.init()
@@ -483,41 +477,41 @@ def chatbot():
                 model_answering = False
                 is_generating = True
 
-            elif user_input and "friday" in user_input:
-                wake_word_detected = True
-                current_model = "Friday"
-                pygame.mixer.music.load("sound_files/beep.flac")
-                pygame.mixer.music.play()
-
-                print("Wake word detected!")
-                model_answering = True
-                is_generating = False
-
-                jarvis_voice = "Matilda"
-                response = random.choice(jarvis_responses)
-                audio = client.generate(text=response, voice=jarvis_voice)
-                play(audio)
-
-                model_answering = False
-                is_generating = True
-
-            elif user_input and "Вероника" in user_input:
-                wake_word_detected = True
-                current_model = "Veronica"
-                pygame.mixer.music.load("sound_files/beep.flac")
-                pygame.mixer.music.play()
-
-                print("Wake word detected!")
-                model_answering = True
-                is_generating = False
-
-                jarvis_voice = "Sarah"
-                response = random.choice(jarvis_responses)
-                audio = client.generate(text=response, voice=jarvis_voice)
-                play(audio)
-
-                model_answering = False
-                is_generating = True
+            # elif user_input and "friday" in user_input:
+            #     wake_word_detected = True
+            #     current_model = "Friday"
+            #     pygame.mixer.music.load("sound_files/beep.flac")
+            #     pygame.mixer.music.play()
+            #
+            #     print("Wake word detected!")
+            #     model_answering = True
+            #     is_generating = False
+            #
+            #     jarvis_voice = "Matilda"
+            #     response = random.choice(jarvis_responses)
+            #     audio = client.generate(text=response, voice=jarvis_voice)
+            #     play(audio)
+            #
+            #     model_answering = False
+            #     is_generating = True
+            #
+            # elif user_input and "Вероника" in user_input:
+            #     wake_word_detected = True
+            #     current_model = "Veronica"
+            #     pygame.mixer.music.load("sound_files/beep.flac")
+            #     pygame.mixer.music.play()
+            #
+            #     print("Wake word detected!")
+            #     model_answering = True
+            #     is_generating = False
+            #
+            #     jarvis_voice = "Sarah"
+            #     response = random.choice(jarvis_responses)
+            #     audio = client.generate(text=response, voice=jarvis_voice)
+            #     play(audio)
+            #
+            #     model_answering = False
+            #     is_generating = True
 
             elif user_input == "излез":
                 print("Goodbye!")
@@ -541,30 +535,12 @@ def chatbot():
                                              "Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Brian")
                 play(audio)
                 model_answering = False
-
-                wake_word_detected = True
-                current_model = "Friday"
-                model_answering = True
                 is_generating = False
-                audio = client.generate(text="Здравейте, аз съм Friday, езиков модел на LLama3. "
-                                             "Тук съм, за да помогна с въпроси и задачи, като използвам последните технологии за машинно обучение. "
-                                              "Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Matilda")
-                play(audio)
-                model_answering = False
-
-                wake_word_detected = True
-                current_model = "Veronica"
-                model_answering = True
-                is_generating = False
-                audio = client.generate(text="Здравейте, аз съм Вероника, езиков модел на DeepSeek. "
-                                             "Моето предназначение е да ви предоставям точна информация и да бъда на разположение за всякакви въпроси или задачи, "
-                                             "с които се нуждаете от помощ. Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Sarah")
-                play(audio)
-                model_answering = False
 
             if "можеш" in user_input and "правиш " in user_input:
                 audio = client.generate(text="Мога да търся информация в интернет, да я обобщавам и да ви я представям. "
-                                             "Също така, мога да изпращам и чета имейли, да пускам музика, да отварям нови документи в Word и дори да ви опиша това, което виждам.",
+                                             "Също така, мога да изпращам и чета имейли, да пускам музика, да отварям нови документи в Word "
+                                             "И дори да ви опиша това, което виждам като изпозлвам Gemini Vision и OCR модел за разпознаване на текст.",
                                         voice="Brian")
                 play(audio)
 
@@ -782,7 +758,7 @@ def chatbot():
                         voice=jarvis_voice)
                     play(audio)
                     create_outlook_appointment(subject, event_time, duration = 60)
-                    update_status(f"Made an event")
+                    update_status(f"Made an event in the calendar")
                     model_answering = False
                     is_generating = False
                     wake_word_detected = False
@@ -792,8 +768,9 @@ def chatbot():
 
                 # Направи ми събитие за 3 следобяд днес, което да продължи 1 час, и да се казва "нахрани котката"pip install pywin32
 
-            if ("виждаш" in user_input or "вижда" in user_input) and "какво" in user_input: # currently not working
+            if ("виждаш" in user_input or "вижда" in user_input) and "какво" in user_input:
                 gemini_vision()
+                update_status(f"Used Gemini Vision")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
@@ -833,6 +810,7 @@ def chatbot():
                                             voice=jarvis_voice)
                     play(audio)
 
+                update_status(f"Used the OCR model")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
@@ -841,6 +819,7 @@ def chatbot():
             if "звъннеш" in user_input:
                 call_phone()
 
+                update_status(f"Called Tati")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
@@ -849,6 +828,7 @@ def chatbot():
             if ("съобщение" in user_input or "съобщения" in user_input) and "пратиш" in user_input:
                 whatsapp_send_message()
 
+                update_status(f"Sent message to Tati")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
@@ -900,6 +880,7 @@ def chatbot():
                 else:
                     print("No song found")
 
+                update_status(f"Used Shazam")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
@@ -976,6 +957,7 @@ def chatbot():
                 doc.save(file_path)
                 os.system(f'start {file_path}')  # Open Word on Windows
 
+                update_status(f"Made a Word document")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
@@ -986,8 +968,9 @@ def chatbot():
                 print(f"Current volume: {current_volume}%")
 
                 # Set volume to 50%
-                set_volume(75)
+                set_volume(50)
 
+                update_status(f"Set volume to 50%")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
@@ -1000,6 +983,7 @@ def chatbot():
                 # Set volume to 50%
                 set_volume(75)
 
+                update_status(f"Set volume to 75%")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
@@ -1012,6 +996,7 @@ def chatbot():
                 # Mute the audio
                 mute(unmute=True)
 
+                update_status(f"Mutted volume")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
@@ -1024,6 +1009,7 @@ def chatbot():
                 # Mute the audio
                 mute(unmute=False)
 
+                update_status(f"Unmuted volume")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
@@ -1036,29 +1022,29 @@ def chatbot():
                 if (current_model == "Jarvis"): #Jarvis model (Gemini)
                     result = chat.send_message({"parts": [user_input]})
 
-                elif (current_model == "Friday"):  # Friday model (Llama3)
-                    model = OllamaLLM(model="llama3")
-
-                    translated_input_bg_to_en = asyncio.run(translate_input(user_input, "bg_to_en"))  # Run the async function
-                    print(translated_input_bg_to_en)
-                    result = model.invoke(input=translated_input_bg_to_en)
-
-                elif (current_model == "Veronica"): #Friday model (Llama3)
-                    model = OllamaLLM(model="deepseek-r1:1.5b")
-
-                    # Translate the user input from Bulgarian to English
-                    translated_input = translate_input(user_input, direction="bg_to_en")
-
-                    # Build the full input for the model with the translated text
-                    full_input = f"{system_instruction}\n\nUser: {translated_input}\nAssistant:"
-
-                    # Get the model result
-                    result1 = model.invoke(input=full_input)
-
-                    # Remove the <think> part
-                    result = re.sub(r"<think>.*?</think>", "", result1, flags=re.DOTALL)
-
-                    print(result)  # For testing
+                # elif (current_model == "Friday"):  # Friday model (Llama3)
+                #     model = OllamaLLM(model="llama3")
+                #
+                #     translated_input_bg_to_en = asyncio.run(translate_input(user_input, "bg_to_en"))  # Run the async function
+                #     print(translated_input_bg_to_en)
+                #     result = model.invoke(input=translated_input_bg_to_en)
+                #
+                # elif (current_model == "Veronica"): #Friday model (Llama3)
+                #     model = OllamaLLM(model="deepseek-r1:1.5b")
+                #
+                #     # Translate the user input from Bulgarian to English
+                #     translated_input = translate_input(user_input, direction="bg_to_en")
+                #
+                #     # Build the full input for the model with the translated text
+                #     full_input = f"{system_instruction}\n\nUser: {translated_input}\nAssistant:"
+                #
+                #     # Get the model result
+                #     result1 = model.invoke(input=full_input)
+                #
+                #     # Remove the <think> part
+                #     result = re.sub(r"<think>.*?</think>", "", result1, flags=re.DOTALL)
+                #
+                #     print(result)  # For testing
 
                 # Done generating the answer
                 is_generating = False
@@ -1070,28 +1056,28 @@ def chatbot():
                     audio = client.generate(text=result.text, voice=jarvis_voice)
                     play(audio)
 
-                elif (current_model == "Friday"):  # Friday answering
-                    print(f"FRIDAY: {result}")
-
-                    translated_input_en_to_bg = asyncio.run(translate_input(user_input, "en_to_bg"))  # Run the async function
-                    print(result)
-
-                    # Generate audio from the translated text
-                    audio = client.generate(text=translated_input_en_to_bg, voice=jarvis_voice)
-
-                    # Play the generated audio
-                    play(audio)
-
-                elif (current_model == "Veronica"):  # Friday answering
-                    print(f"Veronica: {result}")
-                    # Translate the result from English to Bulgarian
-                    translated_result = translate_input(result, direction="en_to_bg")
-
-                    # Generate audio from the translated text
-                    audio = client.generate(text=translated_result, voice=jarvis_voice)
-
-                    # Play the generated audio
-                    play(audio)
+                # elif (current_model == "Friday"):  # Friday answering
+                #     print(f"FRIDAY: {result}")
+                #
+                #     translated_input_en_to_bg = asyncio.run(translate_input(user_input, "en_to_bg"))  # Run the async function
+                #     print(result)
+                #
+                #     # Generate audio from the translated text
+                #     audio = client.generate(text=translated_input_en_to_bg, voice=jarvis_voice)
+                #
+                #     # Play the generated audio
+                #     play(audio)
+                #
+                # elif (current_model == "Veronica"):  # Friday answering
+                #     print(f"Veronica: {result}")
+                #     # Translate the result from English to Bulgarian
+                #     translated_result = translate_input(result, direction="en_to_bg")
+                #
+                #     # Generate audio from the translated text
+                #     audio = client.generate(text=translated_result, voice=jarvis_voice)
+                #
+                #     # Play the generated audio
+                #     play(audio)
 
                 model_answering = False
                 is_generating = False
@@ -1179,5 +1165,3 @@ while running:
 
 # Quit Pygame
 pygame.quit()
-
-
