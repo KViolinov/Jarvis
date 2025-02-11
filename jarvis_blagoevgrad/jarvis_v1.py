@@ -1,11 +1,12 @@
 import io
+import re
 import math
 import pygame
 import random
 import spotipy
 import requests
-from googletrans import Translator
-#from langchain_ollama import OllamaLLM
+from deep_translator import GoogleTranslator
+from langchain_ollama import OllamaLLM
 import win32com.client as win32
 from datetime import datetime, timedelta
 import dateparser
@@ -160,15 +161,6 @@ current_artist = ""
 album_cover = None
 current_progress = 0
 song_duration = 0
-
-async def translate_input(user_input, direction="bg_to_en"):
-    translator = Translator()
-    if direction == "bg_to_en":
-        translated_text = await translator.translate(user_input, src='bg', dest='en')  # Await the translation
-        return translated_text.text
-    elif direction == "en_to_bg":
-        translated_text = await translator.translate(user_input, src='en', dest='bg')  # Await the translation
-        return translated_text.text
 
 def get_current_volume():
     # Get the default audio device
@@ -477,41 +469,41 @@ def chatbot():
                 model_answering = False
                 is_generating = True
 
-            # elif user_input and "friday" in user_input:
-            #     wake_word_detected = True
-            #     current_model = "Friday"
-            #     pygame.mixer.music.load("sound_files/beep.flac")
-            #     pygame.mixer.music.play()
-            #
-            #     print("Wake word detected!")
-            #     model_answering = True
-            #     is_generating = False
-            #
-            #     jarvis_voice = "Matilda"
-            #     response = random.choice(jarvis_responses)
-            #     audio = client.generate(text=response, voice=jarvis_voice)
-            #     play(audio)
-            #
-            #     model_answering = False
-            #     is_generating = True
-            #
-            # elif user_input and "Вероника" in user_input:
-            #     wake_word_detected = True
-            #     current_model = "Veronica"
-            #     pygame.mixer.music.load("sound_files/beep.flac")
-            #     pygame.mixer.music.play()
-            #
-            #     print("Wake word detected!")
-            #     model_answering = True
-            #     is_generating = False
-            #
-            #     jarvis_voice = "Sarah"
-            #     response = random.choice(jarvis_responses)
-            #     audio = client.generate(text=response, voice=jarvis_voice)
-            #     play(audio)
-            #
-            #     model_answering = False
-            #     is_generating = True
+            elif user_input and "friday" in user_input:
+                wake_word_detected = True
+                current_model = "Friday"
+                pygame.mixer.music.load("sound_files/beep.flac")
+                pygame.mixer.music.play()
+
+                print("Wake word detected!")
+                model_answering = True
+                is_generating = False
+
+                jarvis_voice = "Matilda"
+                response = random.choice(jarvis_responses)
+                audio = client.generate(text=response, voice=jarvis_voice)
+                play(audio)
+
+                model_answering = False
+                is_generating = True
+
+            elif user_input and ("Вероника" in user_input or "вероника" in user_input or "Veronica" in user_input):
+                wake_word_detected = True
+                current_model = "Veronica"
+                pygame.mixer.music.load("sound_files/beep.flac")
+                pygame.mixer.music.play()
+
+                print("Wake word detected!")
+                model_answering = True
+                is_generating = False
+
+                jarvis_voice = "Sarah"
+                response = random.choice(jarvis_responses)
+                audio = client.generate(text=response, voice=jarvis_voice)
+                play(audio)
+
+                model_answering = False
+                is_generating = True
 
             elif user_input == "излез":
                 print("Goodbye!")
@@ -1022,29 +1014,31 @@ def chatbot():
                 if (current_model == "Jarvis"): #Jarvis model (Gemini)
                     result = chat.send_message({"parts": [user_input]})
 
-                # elif (current_model == "Friday"):  # Friday model (Llama3)
-                #     model = OllamaLLM(model="llama3")
-                #
-                #     translated_input_bg_to_en = asyncio.run(translate_input(user_input, "bg_to_en"))  # Run the async function
-                #     print(translated_input_bg_to_en)
-                #     result = model.invoke(input=translated_input_bg_to_en)
-                #
-                # elif (current_model == "Veronica"): #Friday model (Llama3)
-                #     model = OllamaLLM(model="deepseek-r1:1.5b")
-                #
-                #     # Translate the user input from Bulgarian to English
-                #     translated_input = translate_input(user_input, direction="bg_to_en")
-                #
-                #     # Build the full input for the model with the translated text
-                #     full_input = f"{system_instruction}\n\nUser: {translated_input}\nAssistant:"
-                #
-                #     # Get the model result
-                #     result1 = model.invoke(input=full_input)
-                #
-                #     # Remove the <think> part
-                #     result = re.sub(r"<think>.*?</think>", "", result1, flags=re.DOTALL)
-                #
-                #     print(result)  # For testing
+                elif (current_model == "Friday"):  # Friday model (Llama3)
+                    model = OllamaLLM(model="llama3")
+
+                    translated_input_bg_to_en = (GoogleTranslator(source='bg', target='en')
+                                                 .translate(user_input))
+                    print(translated_input_bg_to_en)
+                    result = model.invoke(input=translated_input_bg_to_en)
+
+                elif (current_model == "Veronica"): #Friday model (Llama3)
+                    model = OllamaLLM(model="deepseek-r1:1.5b")
+
+                    translated_input_bg_to_en = (GoogleTranslator(source='bg', target='en')
+                                                 .translate(user_input))
+                    print(translated_input_bg_to_en)
+
+                    # Build the full input for the model with the translated text
+                    full_input = f"{system_instruction}\n\nUser: {translated_input_bg_to_en}\nAssistant:"
+
+                    # Get the model result
+                    result1 = model.invoke(input=full_input)
+
+                    # Remove the <think> part
+                    result = re.sub(r"<think>.*?</think>", "", result1, flags=re.DOTALL)
+
+                    print(result)  # For testing
 
                 # Done generating the answer
                 is_generating = False
@@ -1056,28 +1050,29 @@ def chatbot():
                     audio = client.generate(text=result.text, voice=jarvis_voice)
                     play(audio)
 
-                # elif (current_model == "Friday"):  # Friday answering
-                #     print(f"FRIDAY: {result}")
-                #
-                #     translated_input_en_to_bg = asyncio.run(translate_input(user_input, "en_to_bg"))  # Run the async function
-                #     print(result)
-                #
-                #     # Generate audio from the translated text
-                #     audio = client.generate(text=translated_input_en_to_bg, voice=jarvis_voice)
-                #
-                #     # Play the generated audio
-                #     play(audio)
-                #
-                # elif (current_model == "Veronica"):  # Friday answering
-                #     print(f"Veronica: {result}")
-                #     # Translate the result from English to Bulgarian
-                #     translated_result = translate_input(result, direction="en_to_bg")
-                #
-                #     # Generate audio from the translated text
-                #     audio = client.generate(text=translated_result, voice=jarvis_voice)
-                #
-                #     # Play the generated audio
-                #     play(audio)
+                elif (current_model == "Friday"):  # Friday answering
+                    print(f"FRIDAY: {result}")
+
+                    translated_text_en_to_bg = GoogleTranslator(source='en', target='bg').translate(result)
+                    print(translated_text_en_to_bg)
+
+                    # Generate audio from the translated text
+                    audio = client.generate(text=translated_text_en_to_bg, voice=jarvis_voice)
+
+                    # Play the generated audio
+                    play(audio)
+
+                elif (current_model == "Veronica"):  # Friday answering
+                    print(f"Veronica: {result}")
+
+                    translated_text_en_to_bg = GoogleTranslator(source='en', target='bg').translate(result)
+                    print(translated_text_en_to_bg)  # Output: "Здравей, как си?"
+
+                    # Generate audio from the translated text
+                    audio = client.generate(text=translated_text_en_to_bg, voice=jarvis_voice)
+
+                    # Play the generated audio
+                    play(audio)
 
                 model_answering = False
                 is_generating = False
