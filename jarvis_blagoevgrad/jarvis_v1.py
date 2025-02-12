@@ -457,7 +457,7 @@ def chatbot():
                 pygame.mixer.music.load("sound_files/beep.flac")
                 pygame.mixer.music.play()
 
-                print("Wake word detected!")
+                print("✅ Wake word detected!")
                 model_answering = True
                 is_generating = False
 
@@ -475,7 +475,7 @@ def chatbot():
                 pygame.mixer.music.load("sound_files/beep.flac")
                 pygame.mixer.music.play()
 
-                print("Wake word detected!")
+                print("✅ Wake word detected!")
                 model_answering = True
                 is_generating = False
 
@@ -493,7 +493,7 @@ def chatbot():
                 pygame.mixer.music.load("sound_files/beep.flac")
                 pygame.mixer.music.play()
 
-                print("Wake word detected!")
+                print("✅ Wake word detected!")
                 model_answering = True
                 is_generating = False
 
@@ -671,7 +671,7 @@ def chatbot():
                 user_input = record_text()
 
                 if "да" in user_input:
-                    audio = client.generate(text="Супер, пращам имейла", voice=jarvis_voice)
+                    audio = client.generate(text="✅ Супер, пращам имейла", voice=jarvis_voice)
                     play(audio)
                     send_email(subject, body, to_email)
                     update_status(f"Sent an email to {to_email}")
