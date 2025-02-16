@@ -521,20 +521,24 @@ def chatbot():
                 continue
 
             if "представи се" in user_input or "представиш" in user_input:
-                audio = client.generate(text="Здравейте, аз съм Джарвис, езиков модел на Gemini обучен от Google."
+                audio = client.generate(text="Здравейте, аз съм Джарвис, акроним от (Just A Rather Very Intelligent System), аз съм езиков модел на Gemini обучен от Google."
                                              "Вдъхновен съм от легендарния изкуствен интелект на Тони Старк – Джарвис от Железния човек."
                                               "Аз съм тук, за да отговоря на въпросите ви, да помогна със задачи или да водя разговори на всякакви теми. "
                                              "Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Brian")
                 play(audio)
                 model_answering = False
                 is_generating = False
+                continue
 
-            if "можеш" in user_input and "правиш " in user_input:
+            if "можеш" in user_input and "правиш" in user_input:
                 audio = client.generate(text="Мога да търся информация в интернет, да я обобщавам и да ви я представям. "
                                              "Също така, мога да изпращам и чета имейли, да пускам музика, да отварям нови документи в Word "
                                              "И дори да ви опиша това, което виждам като изпозлвам Gemini Vision и OCR модел за разпознаване на текст.",
                                         voice="Brian")
                 play(audio)
+                model_answering = False
+                is_generating = False
+                continue
 
             if ("пусни" in user_input or "пуснеш" in user_input) and ("песен" in user_input or "музика" in user_input):
                 model_answering = True
