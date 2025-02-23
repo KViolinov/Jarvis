@@ -1,32 +1,40 @@
-import os
 import io
+import re
 import math
-import time
 import pygame
 import random
 import spotipy
 import requests
-import webbrowser
+from deep_translator import GoogleTranslator
+from langchain_ollama import OllamaLLM
+import win32com.client as win32
+from datetime import datetime, timedelta
+import dateparser
+from pycaw.pycaw import AudioUtilities
+from pycaw.pycaw import IAudioEndpointVolume
+from docx import Document
 import subprocess
-import speech_recognition as sr
-import google.generativeai as genai
-from elevenlabs import play
-from elevenlabs.client import ElevenLabs
-from spotipy.oauth2 import SpotifyClientCredentials
-from spotipy.oauth2 import SpotifyOAuth
+
+from jarvis_functions.gemini_vision_method import *
+from jarvis_functions.call_phone_method import *
+from jarvis_functions.whatsapp_messaging_method import *
+from jarvis_functions.ocr_model_method import *
+from jarvis_functions.shazam_method import *
+from jarvis_functions.face_recognition import recognize_face
+from api_keys.api_keys import ELEVEN_LABS_API, GEMINI_KEY, SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET
 
 # Initialize Pygame
 pygame.init()
 pygame.mixer.init()
-client = ElevenLabs(api_key="sk_375457e4459933cca5be19b0ec98218defb35908fa48df17")
+client = ElevenLabs(api_key=ELEVEN_LABS_API)
 r = sr.Recognizer()
 
 #tv lights
 WLED_IP = "192.168.10.211"
 
 # Seting up spotify
-client_id = 'dacc19ea9cc44decbdcb2959cd6eb74a'
-client_secret = '11e970f059dc4265a8fe64aaa80a82bf'
+client_id = SPOTIFY_CLIENT_ID
+client_secret = SPOTIFY_CLIENT_SECRET
 sp = spotipy.Spotify(auth_manager=spotipy.SpotifyOAuth(
     client_id=client_id,
     client_secret=client_secret,
@@ -36,7 +44,7 @@ sp = spotipy.Spotify(auth_manager=spotipy.SpotifyOAuth(
 jazz_playlist_url = "spotify:playlist/60joMYdXRjtwwfyERiGu4c?si=42cc553fb755446d"
 
 # Setting up Gemini
-os.environ["GEMINI_API_KEY"] = "AIzaSyBzMQutGJnduWwKcTrmvAvP_QiTj8zaJ3I"
+os.environ["GEMINI_API_KEY"] = GEMINI_KEY
 
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
@@ -62,6 +70,7 @@ chat = model.start_chat(
 # info = pygame.display.Info()
 # WIDTH, HEIGHT = info.current_w, info.current_h
 # screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.FULLSCREEN)
+
 WIDTH, HEIGHT = 1920, 1080
 screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("Jarvis Interface")
@@ -77,6 +86,8 @@ GREEN1 = (0, 219, 0)
 GREEN2 = (4, 201, 4)
 PINK1 = (255, 182, 193)  # Light Pink
 PINK2 = (255, 105, 180)  # Hot Pink
+PURPLE1 = (166, 0, 255)
+PURPLE2 = (176, 28, 255)
 font_large = pygame.font.Font(None, 48)
 font_small = pygame.font.Font(None, 32)
 
@@ -110,13 +121,21 @@ target_color_1 = list(BLUE)
 target_color_2 = list(CYAN)
 color_transition_speed = 10
 
+face_data = {
+    "konstantin": {"message": "Слушам шефе, как да помогна?", "status": "Admin"},
+    "kaloqn": {"message": "Здравейте Калоян Николов, с какво мога да ви бъда полезен?", "status": "Friend"},
+    "ivan": {"message": "Здравейте Иван Георгиев, с какво мога да ви бъда полезен?", "status": "Friend"},
+    "velislav": {"message": "Здравейте Велисав Дончев, с какво мога да ви бъда полезен?", "status": "Friend"},
+    "mert": {"message": "Здравейте Мерт Елсенев, с какво мога да ви бъда полезен?", "status": "Friend"},
+    "atanas": {"message": "Здравейте Атанас Чобанов, с какво мога да ви бъда полезен?", "status": "Friend"}
+}
+
 jarvis_responses = [
     "Тук съм, как мога да помогна?",
     "Слушам, как мога да Ви асистирам?",
     "Как мога да Ви помогна днес?",
     "Как мога да Ви помогна?",
-    "Да?",
-    "Слушам?"
+    "Слушам шефе, как да помогна?"
 ]
 
 selected_songs = [
@@ -134,18 +153,11 @@ selected_songs = [
 
 status_list = []
 
-# URL to be activated
-i_am_home_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=0a833484-1f09-4cd5-9c8d-8e20f1cc2900&token=e95a4fed-075a-42a6-b35c-6b58223b9706&response=html"
-its_that_time_of_the_year_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=619451b4-2c1c-43be-966a-cbdb2f2d5ff8&token=112c0a16-d5b3-4d53-8302-83e2caffc586&response=html"
-turn_on_tv_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=698b8eaa-b9eb-4b78-a6ca-edce2efdcd46&token=fd86a712-c4e4-42b3-8bcc-b2f6b38c1972&response=html"
-turn_off_tv_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=0b878685-8c00-4c37-a91c-38fb4717673e&token=0bc74392-864a-4a63-bed8-34a860c0356c&response=html"
-turn_on_lights_in_kitchen_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=5ac9eabb-97f0-4678-a8a7-b40510644f02&token=dce257f1-25e6-46a0-8468-4c1b1455a263&response=html"
-i_have_guests_url = "https://www.virtualsmarthome.xyz/url_routine_trigger/activate.php?trigger=be986609-4af2-4519-9947-349b44407c18&token=692195ef-9c8f-4dbd-99b9-c204830f6f57&response=html"
-
 jarvis_voice = "Brian" #deffault voice
 
 # Ball initial random positions
-random_particles = [{"x": random.randint(0, WIDTH), "y": random.randint(0, HEIGHT), "dx": random.uniform(-2, 2), "dy": random.uniform(-2, 2)} for _ in range(num_particles)]
+random_particles = [{"x": random.randint(0, WIDTH), "y": random.randint(0, HEIGHT),
+                     "dx": random.uniform(-2, 2), "dy": random.uniform(-2, 2)} for _ in range(num_particles)]
 
 # State Variables
 model_answering = False
@@ -159,6 +171,89 @@ current_artist = ""
 album_cover = None
 current_progress = 0
 song_duration = 0
+
+def get_current_volume():
+    # Get the default audio device
+    devices = AudioUtilities.GetSpeakers()
+    interface = devices.Activate(
+        IAudioEndpointVolume._iid_, 0, None)
+    volume = interface.QueryInterface(IAudioEndpointVolume)
+
+    # Get the current volume level (0.0 to 1.0)
+    current_volume = volume.GetMasterVolumeLevelScalar()
+    return current_volume * 100  # Return as percentage
+
+def set_volume(percentage):
+    # Convert percentage to a value between 0.0 and 1.0
+    if 0 <= percentage <= 100:
+        volume = AudioUtilities.GetSpeakers().Activate(
+            IAudioEndpointVolume._iid_, 0, None).QueryInterface(IAudioEndpointVolume)
+        volume.SetMasterVolumeLevelScalar(percentage / 100.0, None)
+        print(f"Volume set to {percentage}%")
+    else:
+        print("Please provide a valid volume percentage between 0 and 100.")
+
+def mute(unmute=False):
+    # Mute or unmute the audio
+    volume = AudioUtilities.GetSpeakers().Activate(
+        IAudioEndpointVolume._iid_, 0, None).QueryInterface(IAudioEndpointVolume)
+    volume.SetMute(unmute, None)
+    print("Audio is muted." if unmute else "Audio is unmuted.")
+
+def send_email(subject, body, to_email):
+    outlook = win32.Dispatch('outlook.application')
+    mail = outlook.CreateItem(0)
+    mail.Subject = subject
+    mail.Body = body
+    mail.To = to_email
+    mail.Send()
+
+def parse_natural_time(natural_time):
+    """
+    Parses a natural language time expression (e.g., '3 часа следобяд днес', 'tomorrow', 'next Wednesday')
+    into a datetime object.
+    """
+
+    # Manually handle 'днес' and 'утре' since dateparser fails sometimes
+    now = datetime.now()
+
+    # Replace Bulgarian words with English for better parsing
+    normalized_time = (
+        natural_time.replace("днес", "today")
+        .replace("утре", "tomorrow")
+        .replace("следобяд", "PM")
+        .replace("сутринта", "AM")
+    )
+
+    # Try parsing with dateparser
+    event_time = dateparser.parse(
+        normalized_time,
+        languages=['bg', 'en'],  # Use both Bulgarian and English
+        settings={'PREFER_DATES_FROM': 'future'}
+    )
+
+    # If dateparser fails, manually handle simple cases
+    if event_time is None:
+        if "днес" in natural_time:
+            event_time = now.replace(hour=15, minute=0, second=0, microsecond=0)
+        elif "утре" in natural_time:
+            event_time = (now + timedelta(days=1)).replace(hour=15, minute=0, second=0, microsecond=0)
+        else:
+            raise ValueError(f"Could not parse the given time expression: {natural_time}")
+
+    return event_time
+
+def create_outlook_appointment(subject, start_time, duration):
+    outlook = win32.Dispatch("Outlook.Application")
+    appointment = outlook.CreateItem(1)  # 1 = olAppointmentItem
+
+    appointment.Subject = subject
+    appointment.Start = start_time
+    appointment.Duration = duration
+    appointment.ReminderMinutesBeforeStart = 15
+    appointment.Save()
+
+    print(f"✅ Appointment '{subject}' scheduled for {start_time}")
 
 def blend_color(current, target, speed):
     """Gradually transitions the current color toward the target color."""
@@ -208,6 +303,9 @@ def draw_response(model):
     elif model == "Friday":
         target_color_1 = list(PINK1)
         target_color_2 = list(PINK2)
+    elif model == "Veronica":
+        target_color_1 = list(PURPLE1)
+        target_color_2 = list(PURPLE2)
 
     speed = 1
     is_collided = True
@@ -288,6 +386,12 @@ def load_album_cover(url):
         print(f"Error loading album cover: {e}")
     return None
 
+def play_music():
+    sp.start_playback()  # Start playback (Play the song)
+
+def pause_music():
+    sp.pause_playback()  # Pause the playback (Stop the song)
+
 def draw_progress_bar(surface, x, y, width, height, progress, max_progress):
     """Draw a progress bar to represent the song timeline."""
     # Check if max_progress is non-zero to avoid division by zero
@@ -345,11 +449,11 @@ def record_text():
         return None
 
 def chatbot():
-    global wake_word_detected, model_answering, is_generating, current_model
+    global wake_word_detected, model_answering, is_generating, current_model, user_status
 
     current_model= "Jarvis"
 
-    print("Welcome to Jarvis! Say 'Jarvis' to activate. Say 'exit' to quit.")
+    print("Welcome to Vision! Say any of the models name to activate. Say 'exit' to quit.")
 
     while True:
         if not wake_word_detected:
@@ -357,17 +461,68 @@ def chatbot():
             print("Waiting for wake word...")
             user_input = record_text()
 
-            if user_input and "джарвис" in user_input:
+            if user_input and ("джарвис" in user_input or "джарви" in user_input or "джервис" in user_input):
                 wake_word_detected = True
                 current_model = "Jarvis"
-                pygame.mixer.music.load("beep.flac")
+                pygame.mixer.music.load("sound_files/beep.flac")
                 pygame.mixer.music.play()
 
-                print("Wake word detected!")
+                print("✅ Wake word detected!")
                 model_answering = True
                 is_generating = False
 
                 jarvis_voice = "Brian"
+                detected_face = recognize_face().split(" ")[0]  # Get only the name
+
+                print("Detected face:", detected_face)
+
+                if detected_face in face_data:
+                    message = face_data[detected_face]["message"]
+                    user_status = face_data[detected_face]["status"]
+
+                    print(f"Message: {message}")
+                    print(f"Status: {user_status}")
+
+                    response = message
+                    audio = client.generate(text=response, voice=jarvis_voice)
+                    play(audio)
+                else:
+                    print("Name not found in the database.")
+                    audio = client.generate(text="Не можах да ви разпозная кой сте, пробвайте пак", voice="Brian")
+                    play(audio)
+
+                model_answering = False
+                is_generating = True
+
+            elif user_input and "friday" in user_input:
+                wake_word_detected = True
+                current_model = "Friday"
+                pygame.mixer.music.load("sound_files/beep.flac")
+                pygame.mixer.music.play()
+
+                print("✅ Wake word detected!")
+                model_answering = True
+                is_generating = False
+
+                jarvis_voice = "Matilda"
+                response = random.choice(jarvis_responses)
+                audio = client.generate(text=response, voice=jarvis_voice)
+                play(audio)
+
+                model_answering = False
+                is_generating = True
+
+            elif user_input and ("Вероника" in user_input or "вероника" in user_input or "Veronica" in user_input):
+                wake_word_detected = True
+                current_model = "Veronica"
+                pygame.mixer.music.load("sound_files/beep.flac")
+                pygame.mixer.music.play()
+
+                print("✅ Wake word detected!")
+                model_answering = True
+                is_generating = False
+
+                jarvis_voice = "Sarah"
                 response = random.choice(jarvis_responses)
                 audio = client.generate(text=response, voice=jarvis_voice)
                 play(audio)
@@ -386,131 +541,261 @@ def chatbot():
             # Actively listen for commands
             print("Listening for commands...")
             user_input = record_text()
-
             if user_input is None:
                 print("Error: No input detected.")
                 continue
 
-            if "пусни" in user_input and ("песен" in user_input or "музика" in user_input):
-                track_name = random.choice(selected_songs)
-                result = sp.search(q=track_name, limit=1)
+            if "представи се" in user_input or "представиш" in user_input:
+                audio = client.generate(text="Здравейте, аз съм Джарвис, акроним от (Just A Rather Very Intelligent System), аз съм езиков модел на Gemini обучен от Google."
+                                             "Вдъхновен съм от легендарния изкуствен интелект на Тони Старк – Джарвис от Железния човек."
+                                              "Аз съм тук, за да отговоря на въпросите ви, да помогна със задачи или да водя разговори на всякакви теми. "
+                                             "Ако искате да ме попитате нещо, просто ме повикайте по име.", voice="Brian")
+                play(audio)
+                model_answering = False
+                is_generating = False
+                continue
 
-                # Get the song's URI
-                track_uri = result['tracks']['items'][0]['uri']
-                print(f"Playing track: {track_name}")
+            if ("пусни" in user_input or "пуснеш" in user_input) and ("песен" in user_input or "музика" in user_input):
+                model_answering = True
+                is_generating = False
 
-                # Get the current device
-                devices = sp.devices()
-                # Find the LAPTOP_KOSI device by its ID
-                pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
-
-                audio = client.generate(text="Пускам пет едно системата", voice=jarvis_voice)
+                audio = client.generate(text="Разбира се, имате ли някакви предпочитания за песен?", voice=jarvis_voice)
                 play(audio)
 
-                update_status(f"Played {track_name}")
+                model_answering = False
+                is_generating = True
 
-                # Start playback on the LAPTOP_KOSI device
-                sp.start_playback(device_id=pc_device_id, uris=[track_uri])
-                print("Playback started on LAPTOP_KOSI.")
+                print("Listening for song info...")
+                user_input = record_text()
+
+                if user_input is None:
+                    audio = client.generate(text="Нo можах да разбера. Може ли да повторите?", voice=jarvis_voice)
+                    play(audio)
+                    user_input = record_text()
+
+                if "да" in user_input:
+                    model_answering = True
+                    is_generating = False
+
+                    audio = client.generate(text="Добре, коя песен бихте желали да ви пусна?",
+                                            voice=jarvis_voice)
+                    play(audio)
+
+                    print("Listening for specific song...")
+                    user_input = record_text()
+
+                    audio = client.generate(text=f"Пускам, {user_input}",
+                                            voice=jarvis_voice)
+                    play(audio)
+
+                    track_name = user_input
+                    result = sp.search(q=track_name, limit=1)
+
+                    # Get the song's URI
+                    track_uri = result['tracks']['items'][0]['uri']
+                    print(f"Playing track: {track_name}")
+
+                    # Get the current device
+                    devices = sp.devices()
+                    # Find the LAPTOP_KOSI device by its ID
+                    pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
+                    update_status(f"Played {track_name}")
+
+                    # Start playback on the LAPTOP_KOSI device
+                    sp.start_playback(device_id=pc_device_id, uris=[track_uri])
+                    print("Playback started on LAPTOP_KOSI.")
+
+                elif "не" in user_input:
+                    model_answering = True
+                    is_generating = False
+
+                    audio = client.generate(text="Пускам тогава от избрания от вас списък с песни?",
+                                            voice=jarvis_voice)
+                    play(audio)
+
+                    track_name = random.choice(selected_songs)
+                    result = sp.search(q=track_name, limit=1)
+
+                    # Get the song's URI
+                    track_uri = result['tracks']['items'][0]['uri']
+                    print(f"Playing track: {track_name}")
+
+                    # Get the current device
+                    devices = sp.devices()
+                    # Find the LAPTOP_KOSI device by its ID
+                    pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
+                    update_status(f"Played {track_name}")
+
+                    # Start playback on the LAPTOP_KOSI device
+                    sp.start_playback(device_id=pc_device_id, uris=[track_uri])
+                    print("Playback started on LAPTOP_KOSI.")
+
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
                 continue
 
-            if "потърси за" in user_input:
-                # Extract the part after "Може ли да потърсиш за"
-                search_query = user_input.split("потърси за")[1].strip()
+            if "спри" in user_input and ("песента" in user_input or "музиката" in user_input):
+                pause_music()
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
 
-                if search_query:
-                    print(f"Ще търся за: {search_query}")
-                    audio = client.generate(text="Отварям FireFox", voice=jarvis_voice)
+            if (("събитие" in user_input or "събити" in user_input or "събития" in user_input)
+                    and ("създадеш" in user_input or "Създадеш" in user_input or "създай" in user_input or "Създай" in user_input)):
+                # subject of event
+                audio = client.generate(text="Разбира се, как искате да се казва събитието?", voice=jarvis_voice)
+                play(audio)
+
+                print("Listening for apointment info...")
+                subject = record_text()
+
+                # time of event
+                audio = client.generate(text="За кога да бъде това събитие?", voice=jarvis_voice)
+                play(audio)
+
+                print("Listening for apointment info...")
+                user_input = record_text()
+
+                # duration of event
+                audio = client.generate(text="Колко време ще продължи това събитие?", voice=jarvis_voice)
+                play(audio)
+
+                print("Listening for apointment info...")
+                duration = record_text()
+
+                try:
+                    event_time = parse_natural_time(user_input)
+                    print(f"Parsed event time: {event_time}")  # Debug output
+                    audio = client.generate(
+                        text=f"Супер, запазвам събитие {subject}, в {event_time.strftime('%H:%M %d-%m-%Y')}, и ще трае 1 час",
+                        voice=jarvis_voice)
                     play(audio)
-
-                    update_status(f"Searched for {search_query}")
-
-                    # Immediately call the web search function to open browser
-                    perform_web_search(search_query)
+                    create_outlook_appointment(subject, event_time, duration = 60)
+                    update_status(f"Made an event in the calendar")
                     model_answering = False
                     is_generating = False
                     wake_word_detected = False
                     continue
-                else:
-                    print("Не беше въведен търсен термин.")
-                    audio = client.generate(text="Не можах да разбера какво искате да потърсите.", voice=jarvis_voice)
+                except ValueError as e:
+                    print(f"❌ Error: {e}")
+
+                # Направи ми събитие за 3 следобяд днес, което да продължи 1 час, и да се казва "нахрани котката"pip install pywin32
+
+            if ("виждаш" in user_input or "вижда" in user_input) and "какво" in user_input:
+                gemini_vision()
+                update_status(f"Used Gemini Vision")
+                model_answering = False
+                is_generating = False
+                wake_word_detected = False
+                continue
+
+            if ("пише" in user_input or "пиша" in user_input) and "какво" in user_input:
+                # Open the webcam
+                audio = client.generate(text="Камерата по подразбиране ли да използвам?", voice=jarvis_voice)
+                play(audio)
+
+                print("Listening for camera info...")
+                camera_info = record_text()
+
+                camera_index = 0 #deffault index
+
+                if "да" in camera_info:
+                    camera_index = 0
+                    audio = client.generate(text="Добре, използвам web камерата на компютъра ви", voice=jarvis_voice)
                     play(audio)
-                    wake_word_detected = False
+                elif "не" in camera_info or "другата" in user_input:
+                    camera_index = 1
+                    audio = client.generate(text="Добре, използвам камерата от ви ар хедсета",
+                                            voice=jarvis_voice)
+                    play(audio)
 
-            if "лампите в кухнята" in user_input:
-                response = requests.get(turn_on_lights_in_kitchen_url)
-                update_status(f"Turned in kitchen lamps")
+                extracted_text_from_ocr = capture_and_ocr(camera_index = camera_index)
+
+                if len(extracted_text_from_ocr) > 0:
+                    print("Here is what the OCR model detected:")
+                    print(extracted_text_from_ocr)
+                    audio = client.generate(text=fr"OCR модела разпозна следното {extracted_text_from_ocr}",
+                                            voice=jarvis_voice)
+                    play(audio)
+                else:
+                    print("Nothing was detected by the OCR model")
+                    audio = client.generate(text="OCR модела не можа да разпознае нищо от снимката",
+                                            voice=jarvis_voice)
+                    play(audio)
+
+                update_status(f"Used the OCR model")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
                 continue
 
-            if "включи телевизора" in user_input:
-                response = requests.get(turn_on_tv_url)
-                update_status(f"Turned on tv")
+            if "звъннеш" in user_input:
+                call_phone()
+
+                update_status(f"Called Tati")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
                 continue
 
-            if "изключи телевизора" in user_input:
-                response = requests.get(turn_off_tv_url)
-                update_status(f"Turned off tv")
+            if ("съобщение" in user_input or "съобщения" in user_input) and "пратиш" in user_input:
+                whatsapp_send_message()
+
+                update_status(f"Sent message to Tati")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
                 continue
 
-            if "онова време от годината" in user_input or "гостенка" in user_input:
-                response = requests.get(its_that_time_of_the_year_url)
-                track_name = "I see red"
-                result = sp.search(q=track_name, limit=1)
-
-                # Get the song's URI
-                track_uri = result['tracks']['items'][0]['uri']
-                print(f"Playing track: {track_name}")
-
-                # Get the current device
-                devices = sp.devices()
-                # Find the LAPTOP_KOSI device by its ID
-                pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
-
-                audio = client.generate(text="Браво мойто момче", voice=jarvis_voice)
+            if ("разпознаеш" in user_input or "коя" in user_input) and "песен" in user_input:
+                audio = client.generate(text="Разбира се, започвам да слушам. Ако разпозная песента ще ви кажа името и автора на песента",
+                                        voice=jarvis_voice)
                 play(audio)
 
-                update_status(f"Played {track_name}")
+                title, artist = recognize_audio()  # Get the title and artist
+                if title and artist:
+                    audio = client.generate(
+                        text=f"Намерих песента, песента е {title}, а автора е {artist}. Желаете ли да пусна песента в spotify?",
+                        voice=jarvis_voice)
+                    play(audio)
+                    print(f"Song Title: {title}")
+                    print(f"Artist: {artist}")
 
-                # Start playback on the LAPTOP_KOSI device
-                sp.start_playback(device_id=pc_device_id, uris=[track_uri])
-                print("Playback started on LAPTOP_KOSI.")
-                model_answering = False
-                is_generating = False
-                wake_word_detected = False
-                continue
+                    print("Listening for song info...")
+                    answer_info = record_text()
 
-            if "гости" in user_input:
-                response = requests.get(i_have_guests_url)
-                pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'  # Replace with your device ID
+                    if "да" in answer_info:
+                        audio = client.generate(text=f"Пускам, {title} на {artist}",
+                                                voice=jarvis_voice)
+                        play(audio)
+                        track_name = {title}
+                        result = sp.search(q=track_name, limit=1)
 
-                # Start playback for the playlist
-                audio = client.generate(text="Залавям се", voice=jarvis_voice)
-                play(audio)
+                        # Get the song's URI
+                        track_uri = result['tracks']['items'][0]['uri']
+                        print(f"Playing track: {track_name}")
 
-                update_status(f"Played jazz playlist")
+                        # Get the current device
+                        devices = sp.devices()
+                        # Find the LAPTOP_KOSI device by its ID
+                        pc_device_id = '7993e31456b6d73672f9c7bcee055fb10ae52f23'
+                        update_status(f"Played {track_name}")
 
-                # Start playback on the LAPTOP_KOSI device
-                sp.start_playback(device_id=pc_device_id, context_uri=jazz_playlist_url)
-                print("Playback started on LAPTOP_KOSI.")
-                model_answering = False
-                is_generating = False
-                wake_word_detected = False
-                continue
+                        # Start playback on the LAPTOP_KOSI device
+                        sp.start_playback(device_id=pc_device_id, uris=[track_uri])
+                        print("Playback started on LAPTOP_KOSI.")
 
-            if "вкъщи съм" in user_input:
-                response = requests.get(i_am_home_url)
+                    elif "не" in answer_info:
+                        model_answering = False
+                        is_generating = False
+                        wake_word_detected = False
+                        continue
+                else:
+                    print("No song found")
+
+                update_status(f"Used Shazam")
                 model_answering = False
                 is_generating = False
                 wake_word_detected = False
@@ -523,6 +808,32 @@ def chatbot():
                 if (current_model == "Jarvis"): #Jarvis model (Gemini)
                     result = chat.send_message({"parts": [user_input]})
 
+                elif (current_model == "Friday"):  # Friday model (Llama3)
+                    model = OllamaLLM(model="llama3")
+
+                    translated_input_bg_to_en = (GoogleTranslator(source='bg', target='en')
+                                                 .translate(user_input))
+                    print(translated_input_bg_to_en)
+                    result = model.invoke(input=translated_input_bg_to_en)
+
+                elif (current_model == "Veronica"): #Friday model (Llama3)
+                    model = OllamaLLM(model="deepseek-r1:1.5b")
+
+                    translated_input_bg_to_en = (GoogleTranslator(source='bg', target='en')
+                                                 .translate(user_input))
+                    print(translated_input_bg_to_en)
+
+                    # Build the full input for the model with the translated text
+                    full_input = f"{system_instruction}\n\nUser: {translated_input_bg_to_en}\nAssistant:"
+
+                    # Get the model result
+                    result1 = model.invoke(input=full_input)
+
+                    # Remove the <think> part
+                    result = re.sub(r"<think>.*?</think>", "", result1, flags=re.DOTALL)
+
+                    print(result)  # For testing
+
                 # Done generating the answer
                 is_generating = False
                 model_answering = True
@@ -531,6 +842,30 @@ def chatbot():
                 if (current_model == "Jarvis"): #Jarvis answering
                     print(f"Jarvis: {result.text}")
                     audio = client.generate(text=result.text, voice=jarvis_voice)
+                    play(audio)
+
+                elif (current_model == "Friday"):  # Friday answering
+                    print(f"FRIDAY: {result}")
+
+                    translated_text_en_to_bg = GoogleTranslator(source='en', target='bg').translate(result)
+                    print(translated_text_en_to_bg)
+
+                    # Generate audio from the translated text
+                    audio = client.generate(text=translated_text_en_to_bg, voice=jarvis_voice)
+
+                    # Play the generated audio
+                    play(audio)
+
+                elif (current_model == "Veronica"):  # Friday answering
+                    print(f"Veronica: {result}")
+
+                    translated_text_en_to_bg = GoogleTranslator(source='en', target='bg').translate(result)
+                    print(translated_text_en_to_bg)  # Output: "Здравей, как си?"
+
+                    # Generate audio from the translated text
+                    audio = client.generate(text=translated_text_en_to_bg, voice=jarvis_voice)
+
+                    # Play the generated audio
                     play(audio)
 
                 model_answering = False
@@ -558,13 +893,13 @@ while running:
     # Toggle behavior based on whether the model is generating or answering
     if is_generating:
         draw_thinking()  # Show thinking state
-        set_color(255, 165, 0)  # Orange
+        #set_color(255, 165, 0)  # Orange
     elif model_answering:
         draw_response(current_model) # Show answering state
-        set_color(0, 219, 0)  # Green
+        #set_color(0, 219, 0)  # Green
     else:
         draw_default()  # Default state when nothing is happening.
-        set_color(0, 128, 255)  # Red
+        #set_color(0, 128, 255)  # Red
 
     # Smooth Color Transition
     blend_color(current_color_1, target_color_1, color_transition_speed)
@@ -574,7 +909,7 @@ while running:
     draw_particles(screen, random_particles, target_mode=is_collided)
 
     # Draw Text
-    draw_text(screen, "Jarvis Interface", (10, 10), font_large, WHITE)
+    draw_text(screen, "Vision Interface", (10, 10), font_large, WHITE)
     draw_text(screen, "System Status: All Systems Online", (10, 60), font_small, tuple(current_color_2))
 
     # Draw the list of statuses under "System Status"
@@ -583,7 +918,6 @@ while running:
 
     for index, status in enumerate(status_list):
         draw_text(screen, status, (10, start_y + index * line_height), font_small, WHITE)
-
 
     # Function to update the status list
     def update_status(new_status):
