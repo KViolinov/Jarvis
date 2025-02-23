@@ -1,3 +1,5 @@
+# vision ver 1.0 for live demo Blagoevgrad - 2025
+
 import io
 import re
 import math
@@ -1164,3 +1166,4 @@ while running:
 
 # Quit Pygame
 pygame.quit()
+
