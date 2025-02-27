@@ -6,6 +6,7 @@ import pygame
 import random
 import spotipy
 import requests
+from datetime import datetime
 from pycaw.pycaw import AudioUtilities
 from pycaw.pycaw import IAudioEndpointVolume
 import subprocess
@@ -85,8 +86,9 @@ font_large = pygame.font.Font(None, 48)
 font_small = pygame.font.Font(None, 32)
 
 # Fonts
-font_large = pygame.font.Font(pygame.font.get_default_font(), 36)
+font_large = pygame.font.Font(pygame.font.get_default_font(), 40)
 font_small = pygame.font.Font(pygame.font.get_default_font(), 20)
+
 
 # Clock
 clock = pygame.time.Clock()
@@ -256,6 +258,16 @@ def draw_default():
     target_color_2 = list(CYAN)
     speed = 1
     is_collided = False
+
+    # Get the current time
+    current_time = datetime.now().strftime("%H:%M:%S")
+
+    # Render and display the clock in the center (using the larger font)
+    clock_surface = font_large.render(current_time, True, WHITE)
+    clock_x = (WIDTH - clock_surface.get_width()) // 2
+    clock_y = (HEIGHT - clock_surface.get_height()) // 2
+    screen.blit(clock_surface, (clock_x, clock_y))
+
 
 def draw_text(surface, text, position, font, color):
     """Draws text onto the surface."""
