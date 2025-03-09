@@ -1,14 +1,10 @@
 import pywhatkit as kit
 import pyautogui
 import time
-import pyautogui
-import time
-import os
 import speech_recognition as sr
 from elevenlabs import play
 from elevenlabs.client import ElevenLabs
-import subprocess
-from api_keys import ELEVEN_LABS_API, GEMINI_KEY
+from api_keys.api_keys import ELEVEN_LABS_API
 
 client = ElevenLabs(api_key=ELEVEN_LABS_API)
 r = sr.Recognizer()
@@ -58,6 +54,9 @@ def whatsapp_send_message():
         # Press "Enter" to send the message
         pyautogui.press("enter")
 
+        audio = client.generate(text="Съобщението е изпратено", voice="Brian")
+        play(audio)
+
     elif "мама" in contact_info or "майка ми" in contact_info:
         audio = client.generate(text="Добре, съобщението ще бъде към мама. А какво ще искате да бъде съобщението?",
                                 voice="Brian")
@@ -76,3 +75,5 @@ def whatsapp_send_message():
 
         # Press "Enter" to send the message
         pyautogui.press("enter")
+
+
