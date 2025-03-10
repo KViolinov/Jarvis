@@ -1,4 +1,4 @@
-# vision ver 1.0 for live demo Blagoevgrad - 2025
+# vision ver 1.1 for live demo Blagoevgrad - 2025
 
 import io
 import re
@@ -125,8 +125,8 @@ color_transition_speed = 10
 
 jarvis_responses = [
     "Тук съм, как мога да помогна?",
-    "Слушам",
-    "Тук съм",
+    "Слушам, как мога да Ви асистирам?",
+    "Тук съм, как мога да помогна?",
     "С какво мога да Ви бъда полезен?",
     "Слушам шефе, как да помогна?"
 ]
@@ -532,33 +532,33 @@ def chatbot():
                 play(audio)
                 model_answering = False
                 is_generating = False
+                wake_word_detected = False
                 continue
 
             if "кои" in user_input and "потребителите" in user_input:
                 audio = client.generate(
                     text="Въпреки че VISION е създаден с фокус върху деца със зрителни и други затруднения, той е полезен за всеки, който търси интелигентен гласов асистент с усъвършенствани възможности за комуникация, автоматизация на офис задачи и интеграция с големи езикови модели."
                         "Основните групи потребители включват:"
-                        "Хора със зрителни и други увреждания"
-                        "Ученици и студенти"
-                        "Възрастни хора"
-                        "Всички, които желаят удобен и функционален гласов асистент в ежедневието си",
+                        "Хора със зрителни и други увреждания, Ученици и студенти, Възрастни хора и Всички, които желаят удобен и функционален гласов асистент в ежедневието си",
                     voice="Brian")
                 play(audio)
                 model_answering = False
                 is_generating = False
+                wake_word_detected = False
                 continue
 
-            if "кои" in user_input and "инструменти" in user_input:
+            if ("кои" in user_input or "Кои" in user_input) and "инструменти" in user_input:
                 audio = client.generate(
                     text="Иструментите използвани във Vision са следните: За програмиране на програмата е използван Python, Pycharm и PyGame."
                          "Като също е използван OpenCV, EasyOCR и Gemini Vision за разпознаване на изображения"
-                         "За разпознаването на гласа е използвана библиотеката Speech Recognition, а за възпроизвеждане на гласа който чувате в момента е използван Eleven Labs"
-                         "Отделно са използвани библиотеки който могат да управляват Whatsapp, Word и Spotify"
-                        "А моделът на който е базиран Jarvis е Gemini 1.5 Flash, като във бъдеще ще има опция за DeepSeek и Llama 3",
+                         "За разпознаването на гласа е използвана библиотеката Speech Recognition, а за възпроизвеждането на гласа който чувате в момента е използван Eleven Labs."
+                         "Отделно са използвани библиотеки които могат да управляват Whatsapp, Word и Spotify"
+                        "А моделът на който е базиран Jarvis е Gemini едно цяло и пет Flash, като във бъдеще ще има опция за DeepSeek и Llama 3",
                     voice="Brian")
                 play(audio)
                 model_answering = False
                 is_generating = False
+                wake_word_detected = False
                 continue
 
 
